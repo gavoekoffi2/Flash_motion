@@ -1,6 +1,7 @@
+# Build context: .. (repo root, set in docker-compose)
 FROM node:20-bullseye
 
-# Install Chromium for Remotion
+# Install Chromium for Remotion + ffmpeg
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-liberation \
@@ -22,22 +23,24 @@ ENV CHROMIUM_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
-# Copy workspace root files
-COPY package.json ./
-COPY workers/remotion-worker/package*.json ./workers/remotion-worker/
+# Copy prisma schema first (for client generation)
 COPY backend/prisma ./backend/prisma
 
-# Install deps
+# Copy worker package and install deps
+COPY workers/remotion-worker/package*.json ./workers/remotion-worker/
 WORKDIR /app/workers/remotion-worker
 RUN npm ci
 
-# Generate Prisma client
-WORKDIR /app
-RUN cd workers/remotion-worker && npx prisma generate --schema=../../backend/prisma/schema.prisma
+# Generate Prisma client using the schema
+RUN npx prisma generate --schema=/app/backend/prisma/schema.prisma
 
-# Copy source
+# Copy worker source
+WORKDIR /app
 COPY workers/remotion-worker/ ./workers/remotion-worker/
 
 WORKDIR /app/workers/remotion-worker
+
+# Temp directory for renders
+RUN mkdir -p /tmp/flash-motion
 
 CMD ["npx", "tsx", "src/worker.ts"]

@@ -33,7 +33,19 @@ router.post(
         });
       }
 
+      // Check storage quota
+      const quota = await prisma.quota.findUnique({ where: { userId: req.user!.userId } });
+      if (quota) {
+        const totalNewSizeMb = files.reduce((sum, f) => sum + f.size / (1024 * 1024), 0);
+        if (quota.storageUsedMb + totalNewSizeMb > quota.storageLimitMb) {
+          return res.status(429).json({
+            error: `Storage quota exceeded. Used: ${quota.storageUsedMb.toFixed(1)}MB / ${quota.storageLimitMb}MB`,
+          });
+        }
+      }
+
       const uploaded = [];
+      let totalUploadedMb = 0;
 
       for (const file of files) {
         let buffer = file.buffer;
@@ -41,14 +53,19 @@ router.post(
 
         // Auto-resize images if too large (keep under 1920px width)
         if (assetType === "IMAGE" && (file.mimetype === "image/png" || file.mimetype === "image/jpeg" || file.mimetype === "image/webp")) {
-          const metadata = await sharp(buffer).metadata();
-          if (metadata.width && metadata.width > 1920) {
-            buffer = await sharp(buffer)
-              .resize({ width: 1920, withoutEnlargement: true })
-              .toBuffer();
+          try {
+            const metadata = await sharp(buffer).metadata();
+            if (metadata.width && metadata.width > 1920) {
+              buffer = await sharp(buffer)
+                .resize({ width: 1920, withoutEnlargement: true })
+                .toBuffer();
+            }
+          } catch (err) {
+            console.warn(`[Assets] Sharp resize failed for ${file.originalname}:`, err);
           }
         }
 
+        const sizeMb = parseFloat((buffer.length / (1024 * 1024)).toFixed(3));
         const s3Key = generateS3Key(project.id, file.originalname);
         await uploadToS3(s3Key, buffer, file.mimetype);
 
@@ -58,7 +75,7 @@ router.post(
             type: assetType,
             filename: file.originalname,
             mimeType: file.mimetype,
-            sizeMb: parseFloat((buffer.length / (1024 * 1024)).toFixed(3)),
+            sizeMb,
             s3Key,
             metadata: {
               originalSize: file.size,
@@ -67,7 +84,16 @@ router.post(
           },
         });
 
+        totalUploadedMb += sizeMb;
         uploaded.push(asset);
+      }
+
+      // Update storage quota
+      if (quota && totalUploadedMb > 0) {
+        await prisma.quota.update({
+          where: { userId: req.user!.userId },
+          data: { storageUsedMb: { increment: totalUploadedMb } },
+        });
       }
 
       return res.status(201).json({ assets: uploaded });
@@ -91,12 +117,16 @@ router.get("/:projectId/assets", async (req: Request, res: Response) => {
       orderBy: { createdAt: "asc" },
     });
 
-    // Generate signed URLs for preview
+    // Generate signed URLs for preview — per-asset error handling
     const assetsWithUrls = await Promise.all(
-      assets.map(async (a) => ({
-        ...a,
-        previewUrl: await getSignedDownloadUrl(a.s3Key, 3600),
-      })),
+      assets.map(async (a) => {
+        try {
+          const previewUrl = await getSignedDownloadUrl(a.s3Key, 3600);
+          return { ...a, previewUrl };
+        } catch {
+          return { ...a, previewUrl: null };
+        }
+      }),
     );
 
     return res.json({ assets: assetsWithUrls });
@@ -120,6 +150,14 @@ router.delete("/:projectId/assets/:assetId", async (req: Request, res: Response)
 
     await deleteFromS3(asset.s3Key);
     await prisma.asset.delete({ where: { id: asset.id } });
+
+    // Update storage quota
+    if (asset.sizeMb > 0) {
+      await prisma.quota.updateMany({
+        where: { userId: req.user!.userId },
+        data: { storageUsedMb: { decrement: asset.sizeMb } },
+      });
+    }
 
     return res.json({ message: "Asset deleted" });
   } catch (err) {

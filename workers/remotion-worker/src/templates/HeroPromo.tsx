@@ -38,10 +38,8 @@ export interface HeroPromoProps {
   assetUrls: Record<string, string>;
 }
 
-// ── Animation helpers ──
+// ── Animation helpers — all scene types supported ──
 function useAnimation(animation: string, frame: number, fps: number, durationFrames: number) {
-  const progress = frame / durationFrames;
-
   switch (animation) {
     case "fade_in_up":
       return {
@@ -82,12 +80,26 @@ function useAnimation(animation: string, frame: number, fps: number, durationFra
         }),
         transform: "translateY(0)",
       };
+    case "carousel": {
+      const slideX = interpolate(frame, [0, fps * 0.6], [200, 0], { extrapolateRight: "clamp" });
+      const fadeIn = interpolate(frame, [0, fps * 0.4], [0, 1], { extrapolateRight: "clamp" });
+      return { opacity: fadeIn, transform: `translateX(${slideX}px)` };
+    }
     default:
-      return { opacity: 1, transform: "none" };
+      return {
+        opacity: interpolate(frame, [0, fps * 0.3], [0, 1], { extrapolateRight: "clamp" }),
+        transform: "none",
+      };
   }
 }
 
-// ── Scene component ──
+// ── Safe Image component with fallback ──
+function SafeImg({ src, style }: { src: string | null | undefined; style: React.CSSProperties }) {
+  if (!src) return null;
+  return <Img src={src} style={style} />;
+}
+
+// ── Scene Renderer — handles all scene types ──
 function SceneRenderer({
   scene,
   brand,
@@ -98,17 +110,18 @@ function SceneRenderer({
   assetUrls: Record<string, string>;
 }) {
   const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
+  const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const anim = useAnimation(scene.animation, frame, fps, durationFrames);
 
   const primaryAsset = scene.assets[0];
-  const imageUrl = primaryAsset?.url || (primaryAsset?.id ? assetUrls[primaryAsset.id] : null);
+  const imageUrl = primaryAsset?.url || (primaryAsset?.id ? assetUrls[primaryAsset.id] : null) || null;
+  const bgColor = brand.primary_color || "#1a1a2e";
 
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: brand.primary_color || "#1a1a2e",
+        backgroundColor: bgColor,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -118,19 +131,12 @@ function SceneRenderer({
     >
       {/* Background image (blurred) */}
       {imageUrl && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            filter: "blur(30px) brightness(0.3)",
-            transform: "scale(1.2)",
-          }}
-        >
-          <Img src={imageUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <div style={{ position: "absolute", inset: 0, filter: "blur(30px) brightness(0.3)", transform: "scale(1.2)" }}>
+          <SafeImg src={imageUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         </div>
       )}
 
-      {/* Main content */}
+      {/* Main animated content */}
       <div
         style={{
           ...anim,
@@ -138,93 +144,136 @@ function SceneRenderer({
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          padding: "40px",
+          padding: 40,
           zIndex: 1,
           width: "100%",
           height: "100%",
         }}
       >
-        {/* Product image */}
-        {imageUrl && scene.type === "hero" && (
-          <div
-            style={{
-              width: "70%",
-              maxHeight: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: 30,
-            }}
-          >
-            <Img
-              src={imageUrl}
+        {/* HERO */}
+        {scene.type === "hero" && (
+          <>
+            {imageUrl && (
+              <div style={{ width: "70%", maxHeight: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 30 }}>
+                <SafeImg src={imageUrl} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 16, boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }} />
+              </div>
+            )}
+            <p style={{ fontSize: 48, fontWeight: 700, color: "#fff", lineHeight: 1.3, textShadow: "0 2px 20px rgba(0,0,0,0.5)", margin: 0, textAlign: "center", maxWidth: "85%" }}>
+              {scene.text}
+            </p>
+            <div
               style={{
-                maxWidth: "100%",
-                maxHeight: "100%",
-                objectFit: "contain",
-                borderRadius: 16,
-                boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+                marginTop: 40,
+                opacity: interpolate(frame, [fps * 1, fps * 1.5], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
+                transform: `translateY(${interpolate(frame, [fps * 1, fps * 1.5], [20, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}px)`,
               }}
-            />
+            >
+              <div style={{ background: "white", color: bgColor, padding: "14px 40px", borderRadius: 50, fontSize: 22, fontWeight: 700 }}>
+                En savoir plus
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* CAROUSEL */}
+        {scene.type === "carousel" && (
+          <>
+            <div style={{ display: "flex", gap: 20, width: "90%", justifyContent: "center", marginBottom: 30, flexWrap: "wrap" }}>
+              {scene.assets.map((asset, i) => {
+                const url = asset.url || (asset.id ? assetUrls[asset.id] : null);
+                const delay = i * fps * 0.2;
+                const slideOpacity = interpolate(frame, [delay, delay + fps * 0.4], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+                const slideX = interpolate(frame, [delay, delay + fps * 0.5], [60, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+                return (
+                  <div
+                    key={asset.id || i}
+                    style={{
+                      opacity: slideOpacity,
+                      transform: `translateX(${slideX}px)`,
+                      width: scene.assets.length <= 2 ? "45%" : "30%",
+                      aspectRatio: "1",
+                      borderRadius: 16,
+                      overflow: "hidden",
+                      boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+                      backgroundColor: "rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    {url ? (
+                      <SafeImg src={url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, color: "rgba(255,255,255,0.3)" }}>
+                        {i + 1}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p style={{ fontSize: 36, fontWeight: 700, color: "#fff", lineHeight: 1.3, textShadow: "0 2px 20px rgba(0,0,0,0.5)", margin: 0, textAlign: "center", maxWidth: "85%" }}>
+              {scene.text}
+            </p>
+          </>
+        )}
+
+        {/* FEATURE LIST */}
+        {scene.type === "feature_list" && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "90%" }}>
+            {imageUrl && (
+              <div style={{ width: "40%", marginBottom: 30 }}>
+                <SafeImg src={imageUrl} style={{ width: "100%", objectFit: "contain", borderRadius: 12 }} />
+              </div>
+            )}
+            <p style={{ fontSize: 38, fontWeight: 700, color: "#fff", lineHeight: 1.4, textShadow: "0 2px 20px rgba(0,0,0,0.5)", margin: 0, textAlign: "center", maxWidth: "85%" }}>
+              {scene.text}
+            </p>
           </div>
         )}
 
-        {/* Text */}
-        <div
-          style={{
-            textAlign: "center",
-            maxWidth: "85%",
-          }}
-        >
-          <p
-            style={{
-              fontSize: scene.type === "hero" ? 48 : 36,
-              fontWeight: 700,
-              color: "#ffffff",
-              lineHeight: 1.3,
-              textShadow: "0 2px 20px rgba(0,0,0,0.5)",
-              margin: 0,
-            }}
-          >
-            {scene.text}
-          </p>
-        </div>
-
-        {/* CTA for hero scenes */}
-        {scene.type === "hero" && (
-          <div
-            style={{
-              marginTop: 40,
-              opacity: interpolate(frame, [fps * 1, fps * 1.5], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-              transform: `translateY(${interpolate(frame, [fps * 1, fps * 1.5], [20, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}px)`,
-            }}
-          >
-            <div
-              style={{
-                background: "white",
-                color: brand.primary_color || "#1a1a2e",
-                padding: "14px 40px",
-                borderRadius: 50,
-                fontSize: 22,
-                fontWeight: 700,
-              }}
-            >
-              En savoir plus
-            </div>
+        {/* DEMO */}
+        {scene.type === "demo" && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "90%" }}>
+            {imageUrl && (
+              <div style={{ width: "85%", marginBottom: 20, borderRadius: 12, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", border: "2px solid rgba(255,255,255,0.15)" }}>
+                <SafeImg src={imageUrl} style={{ width: "100%", objectFit: "contain" }} />
+              </div>
+            )}
+            <p style={{ fontSize: 30, fontWeight: 600, color: "#fff", lineHeight: 1.3, textShadow: "0 2px 10px rgba(0,0,0,0.5)", margin: 0, textAlign: "center", maxWidth: "80%", opacity: 0.9 }}>
+              {scene.text}
+            </p>
           </div>
+        )}
+
+        {/* OUTRO */}
+        {scene.type === "outro" && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            {imageUrl && (
+              <div style={{ width: 120, height: 120, marginBottom: 30 }}>
+                <SafeImg src={imageUrl} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              </div>
+            )}
+            <p style={{ fontSize: 42, fontWeight: 700, color: "#fff", lineHeight: 1.3, textShadow: "0 2px 20px rgba(0,0,0,0.5)", margin: 0, textAlign: "center", maxWidth: "85%" }}>
+              {scene.text}
+            </p>
+          </div>
+        )}
+
+        {/* Fallback for unknown types */}
+        {!["hero", "carousel", "feature_list", "demo", "outro"].includes(scene.type) && (
+          <>
+            {imageUrl && (
+              <div style={{ width: "60%", marginBottom: 20 }}>
+                <SafeImg src={imageUrl} style={{ maxWidth: "100%", objectFit: "contain", borderRadius: 16 }} />
+              </div>
+            )}
+            <p style={{ fontSize: 36, fontWeight: 700, color: "#fff", lineHeight: 1.3, textShadow: "0 2px 20px rgba(0,0,0,0.5)", margin: 0, textAlign: "center", maxWidth: "85%" }}>
+              {scene.text}
+            </p>
+          </>
         )}
       </div>
 
       {/* Scene number indicator */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 20,
-          right: 20,
-          fontSize: 12,
-          color: "rgba(255,255,255,0.3)",
-        }}
-      >
+      <div style={{ position: "absolute", bottom: 20, right: 20, fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
         {scene.id}
       </div>
     </AbsoluteFill>

@@ -1,9 +1,11 @@
+# Build context: ../backend (set in docker-compose)
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY backend/package*.json ./
+COPY package*.json ./
+COPY prisma ./prisma
 RUN npm ci
-COPY backend/ .
 RUN npx prisma generate
+COPY . .
 RUN npm run build
 
 FROM node:20-alpine

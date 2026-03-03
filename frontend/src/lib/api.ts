@@ -1,3 +1,5 @@
+import type { User, Project, Asset, Storyboard, RenderJob } from "./types";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
 class ApiClient {
@@ -5,10 +7,11 @@ class ApiClient {
 
   setToken(token: string | null) {
     this.token = token;
+    if (typeof window === "undefined") return;
     if (token) {
-      if (typeof window !== "undefined") localStorage.setItem("fm_token", token);
+      localStorage.setItem("fm_token", token);
     } else {
-      if (typeof window !== "undefined") localStorage.removeItem("fm_token");
+      localStorage.removeItem("fm_token");
     }
   }
 
@@ -23,14 +26,13 @@ class ApiClient {
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const token = this.getToken();
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
       ...(options.headers as Record<string, string> || {}),
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    // Remove Content-Type for FormData
-    if (options.body instanceof FormData) {
-      delete headers["Content-Type"];
+    // Set Content-Type for non-FormData requests
+    if (!(options.body instanceof FormData)) {
+      headers["Content-Type"] = "application/json";
     }
 
     const res = await fetch(`${API_BASE}${path}`, {
@@ -46,9 +48,9 @@ class ApiClient {
     return res.json();
   }
 
-  // Auth
+  // ── Auth ──
   async register(email: string, password: string, name?: string) {
-    const data = await this.request<{ token: string; user: any }>("/auth/register", {
+    const data = await this.request<{ token: string; user: User }>("/auth/register", {
       method: "POST",
       body: JSON.stringify({ email, password, name }),
     });
@@ -57,7 +59,7 @@ class ApiClient {
   }
 
   async login(email: string, password: string) {
-    const data = await this.request<{ token: string; user: any }>("/auth/login", {
+    const data = await this.request<{ token: string; user: User }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
@@ -66,81 +68,88 @@ class ApiClient {
   }
 
   async me() {
-    return this.request<{ user: any }>("/auth/me");
+    return this.request<{ user: User }>("/auth/me");
   }
 
   logout() {
     this.setToken(null);
   }
 
-  // Projects
-  async listProjects() {
-    return this.request<{ projects: any[] }>("/projects");
+  // ── Projects ──
+  async listProjects(page = 1, limit = 20) {
+    return this.request<{ projects: Project[]; total: number; page: number; limit: number }>(
+      `/projects?page=${page}&limit=${limit}`,
+    );
   }
 
   async getProject(id: string) {
-    return this.request<{ project: any }>(`/projects/${id}`);
+    return this.request<{ project: Project }>(`/projects/${encodeURIComponent(id)}`);
   }
 
   async createProject(data: { title: string; script: string; aspectRatio?: string }) {
-    return this.request<{ project: any }>("/projects", {
+    return this.request<{ project: Project }>("/projects", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  async updateProject(id: string, data: any) {
-    return this.request<{ project: any }>(`/projects/${id}`, {
+  async updateProject(id: string, data: Partial<Pick<Project, "title" | "script" | "aspectRatio" | "brandConfig">>) {
+    return this.request<{ project: Project }>(`/projects/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   }
 
   async deleteProject(id: string) {
-    return this.request<{ message: string }>(`/projects/${id}`, { method: "DELETE" });
+    return this.request<{ message: string }>(`/projects/${encodeURIComponent(id)}`, { method: "DELETE" });
   }
 
+  // ── Storyboard ──
   async generateStoryboard(projectId: string) {
-    return this.request<{ storyboard: any }>(`/projects/${projectId}/generate-storyboard`, {
+    return this.request<{ storyboard: Storyboard }>(`/projects/${encodeURIComponent(projectId)}/generate-storyboard`, {
       method: "POST",
     });
   }
 
-  async updateStoryboard(projectId: string, storyboard: any) {
-    return this.request<{ message: string }>(`/projects/${projectId}/storyboard`, {
+  async updateStoryboard(projectId: string, storyboard: Storyboard) {
+    return this.request<{ message: string }>(`/projects/${encodeURIComponent(projectId)}/storyboard`, {
       method: "PUT",
       body: JSON.stringify({ storyboard }),
     });
   }
 
+  // ── Render ──
   async startRender(projectId: string) {
-    return this.request<{ renderJob: any }>(`/projects/${projectId}/render`, {
+    return this.request<{ renderJob: RenderJob }>(`/projects/${encodeURIComponent(projectId)}/render`, {
       method: "POST",
     });
   }
 
   async getRenderStatus(projectId: string, jobId: string) {
-    return this.request<{ renderJob: any }>(`/projects/${projectId}/render/${jobId}`);
+    return this.request<{ renderJob: RenderJob }>(
+      `/projects/${encodeURIComponent(projectId)}/render/${encodeURIComponent(jobId)}`,
+    );
   }
 
-  // Assets
+  // ── Assets ──
   async uploadAssets(projectId: string, files: File[]) {
     const formData = new FormData();
     files.forEach((f) => formData.append("files", f));
-    return this.request<{ assets: any[] }>(`/projects/${projectId}/assets`, {
+    return this.request<{ assets: Asset[] }>(`/projects/${encodeURIComponent(projectId)}/assets`, {
       method: "POST",
       body: formData,
     });
   }
 
   async listAssets(projectId: string) {
-    return this.request<{ assets: any[] }>(`/projects/${projectId}/assets`);
+    return this.request<{ assets: Asset[] }>(`/projects/${encodeURIComponent(projectId)}/assets`);
   }
 
   async deleteAsset(projectId: string, assetId: string) {
-    return this.request<{ message: string }>(`/projects/${projectId}/assets/${assetId}`, {
-      method: "DELETE",
-    });
+    return this.request<{ message: string }>(
+      `/projects/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}`,
+      { method: "DELETE" },
+    );
   }
 }
 
