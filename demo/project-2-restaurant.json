@@ -1,0 +1,47 @@
+{
+  "title": "Restaurant Le Gourmet — Menu du Jour",
+  "script": "Le Gourmet vous invite à découvrir son menu du jour.\nEntrée : Carpaccio de bœuf aux câpres.\nPlat : Risotto crémeux aux champignons.\nDessert : Tarte tatin maison. Réservez maintenant !",
+  "aspect_ratio": "9:16",
+  "storyboard": {
+    "project_title": "Restaurant Le Gourmet — Menu du Jour",
+    "aspect_ratio": "9:16",
+    "scenes": [
+      {
+        "id": 1,
+        "duration_s": 3,
+        "type": "hero",
+        "text": "Le Gourmet vous invite à découvrir son menu du jour",
+        "assets": [{"type": "image", "id": "img_restaurant", "placement": "background", "scale": "cover"}],
+        "animation": "fade_in_up",
+        "audio_clip": null,
+        "tts_instruction": null
+      },
+      {
+        "id": 2,
+        "duration_s": 4,
+        "type": "carousel",
+        "text": "Carpaccio de bœuf • Risotto crémeux • Tarte tatin",
+        "assets": [
+          {"type": "image", "id": "img_entree", "placement": "center", "scale": "cover"},
+          {"type": "image", "id": "img_plat", "placement": "center", "scale": "cover"},
+          {"type": "image", "id": "img_dessert", "placement": "center", "scale": "cover"}
+        ],
+        "animation": "slide_left",
+        "audio_clip": null,
+        "tts_instruction": null
+      },
+      {
+        "id": 3,
+        "duration_s": 3,
+        "type": "outro",
+        "text": "Réservez votre table — Le Gourmet",
+        "assets": [{"type": "logo", "id": "logo_gourmet", "placement": "center", "scale": "contain"}],
+        "animation": "bounce",
+        "audio_clip": null,
+        "tts_instruction": null
+      }
+    ],
+    "brand": {"primary_color": "#2D1B0E", "logo_id": "logo_gourmet"},
+    "caption_short": "Le Gourmet — Menu du jour : Carpaccio, Risotto crémeux, Tarte tatin. Réservez ! #restaurant #menuDuJour"
+  }
+}

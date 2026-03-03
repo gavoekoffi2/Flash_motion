@@ -1,0 +1,43 @@
+FROM node:20-bullseye
+
+# Install Chromium for Remotion
+RUN apt-get update && apt-get install -y \
+    chromium \
+    fonts-liberation \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libgtk-3-0 \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV CHROMIUM_PATH=/usr/bin/chromium
+
+WORKDIR /app
+
+# Copy workspace root files
+COPY package.json ./
+COPY workers/remotion-worker/package*.json ./workers/remotion-worker/
+COPY backend/prisma ./backend/prisma
+
+# Install deps
+WORKDIR /app/workers/remotion-worker
+RUN npm ci
+
+# Generate Prisma client
+WORKDIR /app
+RUN cd workers/remotion-worker && npx prisma generate --schema=../../backend/prisma/schema.prisma
+
+# Copy source
+COPY workers/remotion-worker/ ./workers/remotion-worker/
+
+WORKDIR /app/workers/remotion-worker
+
+CMD ["npx", "tsx", "src/worker.ts"]

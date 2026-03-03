@@ -1,0 +1,247 @@
+import { Worker, Job } from "bullmq";
+import { bundle } from "@remotion/bundler";
+import { renderMedia, selectComposition } from "@remotion/renderer";
+import { PrismaClient } from "@prisma/client";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import path from "path";
+import fs from "fs";
+import dotenv from "dotenv";
+
+dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+
+// ── Config ──
+const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
+const S3_ENDPOINT = process.env.S3_ENDPOINT || "http://localhost:9000";
+const S3_ACCESS_KEY = process.env.S3_ACCESS_KEY || "minioadmin";
+const S3_SECRET_KEY = process.env.S3_SECRET_KEY || "minioadmin";
+const S3_BUCKET = process.env.S3_BUCKET || "flash-motion";
+const S3_REGION = process.env.S3_REGION || "us-east-1";
+const TEMP_DIR = process.env.TEMP_DIR || "/tmp/flash-motion";
+const MAX_CONCURRENT = parseInt(process.env.MAX_CONCURRENT_RENDERS || "1", 10);
+
+function getRedisOpts() {
+  const url = new URL(REDIS_URL);
+  return {
+    host: url.hostname,
+    port: parseInt(url.port || "6379", 10),
+    password: url.password || undefined,
+  };
+}
+
+const prisma = new PrismaClient();
+const s3 = new S3Client({
+  endpoint: S3_ENDPOINT,
+  region: S3_REGION,
+  credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
+  forcePathStyle: true,
+});
+
+// ── Ensure temp directory ──
+if (!fs.existsSync(TEMP_DIR)) {
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+}
+
+interface RenderJobData {
+  jobId: string;
+  projectId: string;
+  storyboard: {
+    project_title: string;
+    aspect_ratio: string;
+    scenes: any[];
+    brand: { primary_color: string; logo_id: string | null };
+  };
+  assets: { id: string; type: string; s3Key: string }[];
+  outputKey: string;
+}
+
+// ── Get signed URLs for assets ──
+async function resolveAssetUrls(assets: RenderJobData["assets"]): Promise<Record<string, string>> {
+  const urls: Record<string, string> = {};
+  for (const asset of assets) {
+    try {
+      const url = await getSignedUrl(
+        s3,
+        new GetObjectCommand({ Bucket: S3_BUCKET, Key: asset.s3Key }),
+        { expiresIn: 3600 },
+      );
+      urls[asset.id] = url;
+    } catch (err) {
+      console.warn(`[Worker] Could not resolve URL for asset ${asset.id}:`, err);
+    }
+  }
+  return urls;
+}
+
+// ── Determine composition based on aspect ratio ──
+function getCompositionId(aspectRatio: string): string {
+  switch (aspectRatio) {
+    case "16:9": return "HeroPromo-16x9";
+    case "1:1": return "HeroPromo-1x1";
+    default: return "HeroPromo";
+  }
+}
+
+// ── Process render job ──
+async function processRender(job: Job<RenderJobData>) {
+  const { jobId, projectId, storyboard, assets, outputKey } = job.data;
+  const outputPath = path.join(TEMP_DIR, `${jobId}.mp4`);
+
+  console.log(`[Worker] Starting render for job ${jobId}, project ${projectId}`);
+
+  // Update status to RENDERING
+  await prisma.renderJob.update({
+    where: { id: jobId },
+    data: { status: "RENDERING", startedAt: new Date() },
+  });
+
+  try {
+    // 1. Resolve asset URLs
+    const assetUrls = await resolveAssetUrls(assets);
+
+    // 2. Bundle Remotion project
+    console.log("[Worker] Bundling Remotion project...");
+    const bundleLocation = await bundle({
+      entryPoint: path.resolve(__dirname, "compositions/index.ts"),
+      webpackOverride: (config) => config,
+    });
+
+    // 3. Calculate total duration
+    const totalDuration = storyboard.scenes.reduce(
+      (sum: number, s: any) => sum + (s.duration_s || 3),
+      0,
+    );
+    const fps = 30;
+    const compositionId = getCompositionId(storyboard.aspect_ratio);
+
+    // 4. Select composition
+    const composition = await selectComposition({
+      serveUrl: bundleLocation,
+      id: compositionId,
+      inputProps: {
+        scenes: storyboard.scenes,
+        brand: storyboard.brand,
+        assetUrls,
+      },
+    });
+
+    // Override duration
+    composition.durationInFrames = totalDuration * fps;
+
+    // 5. Render video
+    console.log(`[Worker] Rendering ${compositionId}: ${totalDuration}s, ${composition.width}x${composition.height}`);
+    await renderMedia({
+      composition,
+      serveUrl: bundleLocation,
+      codec: "h264",
+      outputLocation: outputPath,
+      inputProps: {
+        scenes: storyboard.scenes,
+        brand: storyboard.brand,
+        assetUrls,
+      },
+      onProgress: ({ progress }) => {
+        if (Math.round(progress * 100) % 10 === 0) {
+          console.log(`[Worker] Render progress: ${Math.round(progress * 100)}%`);
+        }
+      },
+    });
+
+    console.log(`[Worker] Render complete. Uploading to S3...`);
+
+    // 6. Upload to S3
+    await prisma.renderJob.update({
+      where: { id: jobId },
+      data: { status: "UPLOADING" },
+    });
+
+    const fileBuffer = fs.readFileSync(outputPath);
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: outputKey,
+        Body: fileBuffer,
+        ContentType: "video/mp4",
+      }),
+    );
+
+    // 7. Mark as done
+    await prisma.renderJob.update({
+      where: { id: jobId },
+      data: { status: "DONE", finishedAt: new Date() },
+    });
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { status: "DONE" },
+    });
+
+    console.log(`[Worker] Job ${jobId} completed successfully.`);
+  } catch (err) {
+    console.error(`[Worker] Job ${jobId} failed:`, err);
+
+    await prisma.renderJob.update({
+      where: { id: jobId },
+      data: {
+        status: "FAILED",
+        error: (err as Error).message,
+        finishedAt: new Date(),
+      },
+    });
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { status: "FAILED" },
+    });
+
+    throw err;
+  } finally {
+    // Cleanup temp file
+    try {
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    } catch {}
+  }
+}
+
+// ── Start worker ──
+console.log(`[Worker] Starting render worker (concurrency: ${MAX_CONCURRENT})...`);
+
+const worker = new Worker<RenderJobData>("render", processRender, {
+  connection: getRedisOpts(),
+  concurrency: MAX_CONCURRENT,
+  limiter: {
+    max: MAX_CONCURRENT,
+    duration: 1000,
+  },
+});
+
+worker.on("completed", (job) => {
+  console.log(`[Worker] Job ${job.id} completed`);
+});
+
+worker.on("failed", (job, err) => {
+  console.error(`[Worker] Job ${job?.id} failed:`, err.message);
+});
+
+worker.on("error", (err) => {
+  console.error("[Worker] Worker error:", err);
+});
+
+// Graceful shutdown
+process.on("SIGTERM", async () => {
+  console.log("[Worker] Shutting down...");
+  await worker.close();
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on("SIGINT", async () => {
+  console.log("[Worker] Shutting down...");
+  await worker.close();
+  await prisma.$disconnect();
+  process.exit(0);
+});

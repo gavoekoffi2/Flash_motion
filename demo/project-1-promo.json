@@ -1,0 +1,43 @@
+{
+  "title": "Promo Produit X",
+  "script": "Découvrez le Produit X — révolutionnez votre quotidien.\nUn design élégant. Des performances incroyables.\nDisponible maintenant à -30%. Commandez sur notre site.",
+  "aspect_ratio": "9:16",
+  "storyboard": {
+    "project_title": "Promo Produit X",
+    "aspect_ratio": "9:16",
+    "scenes": [
+      {
+        "id": 1,
+        "duration_s": 4,
+        "type": "hero",
+        "text": "Découvrez le Produit X — révolutionnez votre quotidien.",
+        "assets": [{"type": "image", "id": "img_01", "placement": "center", "scale": "cover"}],
+        "animation": "fade_in_up",
+        "audio_clip": null,
+        "tts_instruction": "female_african_accent_short"
+      },
+      {
+        "id": 2,
+        "duration_s": 3,
+        "type": "feature_list",
+        "text": "Un design élégant. Des performances incroyables.",
+        "assets": [],
+        "animation": "slide_left",
+        "audio_clip": null,
+        "tts_instruction": null
+      },
+      {
+        "id": 3,
+        "duration_s": 3,
+        "type": "outro",
+        "text": "Disponible à -30% — Commandez maintenant !",
+        "assets": [{"type": "logo", "id": "logo_01", "placement": "center", "scale": "contain"}],
+        "animation": "zoom_in",
+        "audio_clip": null,
+        "tts_instruction": null
+      }
+    ],
+    "brand": {"primary_color": "#FF6B35", "logo_id": "logo_01"},
+    "caption_short": "Découvrez le Produit X ! Design élégant, performances incroyables. -30% maintenant. #promo #produitx"
+  }
+}

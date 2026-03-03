@@ -1,0 +1,23 @@
+{
+  "name": "flash-motion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Flash Motion — Text to Motion Design Video SaaS",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "workers/*"
+  ],
+  "scripts": {
+    "dev": "docker-compose -f infra/docker-compose.dev.yml up",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:worker": "cd workers/remotion-worker && npm run dev",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

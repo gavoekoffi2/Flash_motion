@@ -1,0 +1,53 @@
+{
+  "title": "Lancement AppFlow — Productivité x10",
+  "script": "AppFlow : l'outil qui transforme votre productivité.\nTableaux de bord intelligents. Automatisation avancée. Intégrations illimitées.\nEssai gratuit 14 jours — commencez maintenant.",
+  "aspect_ratio": "16:9",
+  "storyboard": {
+    "project_title": "Lancement AppFlow — Productivité x10",
+    "aspect_ratio": "16:9",
+    "scenes": [
+      {
+        "id": 1,
+        "duration_s": 4,
+        "type": "hero",
+        "text": "AppFlow : l'outil qui transforme votre productivité",
+        "assets": [{"type": "image", "id": "img_dashboard", "placement": "center", "scale": "contain"}],
+        "animation": "scale_up",
+        "audio_clip": null,
+        "tts_instruction": "male_neutral_energetic"
+      },
+      {
+        "id": 2,
+        "duration_s": 4,
+        "type": "feature_list",
+        "text": "Tableaux de bord intelligents • Automatisation • Intégrations",
+        "assets": [{"type": "image", "id": "img_features", "placement": "left", "scale": "contain"}],
+        "animation": "slide_left",
+        "audio_clip": null,
+        "tts_instruction": null
+      },
+      {
+        "id": 3,
+        "duration_s": 3,
+        "type": "demo",
+        "text": "Interface fluide, résultats immédiats",
+        "assets": [{"type": "image", "id": "img_screen", "placement": "center", "scale": "contain"}],
+        "animation": "zoom_in",
+        "audio_clip": null,
+        "tts_instruction": null
+      },
+      {
+        "id": 4,
+        "duration_s": 3,
+        "type": "outro",
+        "text": "Essai gratuit 14 jours — Commencez maintenant !",
+        "assets": [{"type": "logo", "id": "logo_appflow", "placement": "center", "scale": "contain"}],
+        "animation": "bounce",
+        "audio_clip": null,
+        "tts_instruction": null
+      }
+    ],
+    "brand": {"primary_color": "#6366F1", "logo_id": "logo_appflow"},
+    "caption_short": "AppFlow — Productivité x10. Tableaux de bord, automatisation, intégrations. Essai gratuit ! #saas #productivité"
+  }
+}
