@@ -1,0 +1,3 @@
+{$API_DOMAIN:api.flashmotion.dev} {
+  reverse_proxy backend:4000
+}

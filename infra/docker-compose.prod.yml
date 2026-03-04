@@ -1,5 +1,12 @@
 version: "3.8"
 
+# ═══════════════════════════════════════════════════════
+# Flash Motion — Production Stack
+# Frontend: Netlify (separate)
+# Backend:  This compose (API + DB + Redis + S3 + Worker)
+# HTTPS:    Caddy with automatic Let's Encrypt
+# ═══════════════════════════════════════════════════════
+
 services:
   # ── PostgreSQL ──
   postgres:
@@ -29,7 +36,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── MinIO ──
+  # ── MinIO (S3-compatible storage) ──
   minio:
     image: minio/minio:latest
     restart: always
@@ -40,7 +47,7 @@ services:
     volumes:
       - minio-data:/data
     ports:
-      - "9001:9001"
+      - "127.0.0.1:9001:9001"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 10s
@@ -69,36 +76,40 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me}
       S3_BUCKET: flash-motion
-      JWT_SECRET: ${JWT_SECRET:-change-me}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL:-https://flashmotion.netlify.app}
       LLM_MODE: ${LLM_MODE:-auto}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-mistralai/mistral-7b-instruct}
       OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-mistral}
-    ports:
-      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     deploy:
       resources:
         limits:
           memory: 512M
 
-  # ── Frontend ──
-  frontend:
-    build:
-      context: ../frontend
-      dockerfile: ../infra/Dockerfile.frontend
-      args:
-        NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost:4000/api}
+  # ── Caddy — Reverse proxy with automatic HTTPS (Let's Encrypt) ──
+  caddy:
+    image: caddy:2-alpine
     restart: always
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
-      - "3000:3000"
-    deploy:
-      resources:
-        limits:
-          memory: 256M
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      API_DOMAIN: ${API_DOMAIN:-api.flashmotion.dev}
 
   # ── Remotion Render Worker ──
   worker:
@@ -136,4 +147,6 @@ volumes:
   postgres-data:
   redis-data:
   minio-data:
+  caddy-data:
+  caddy-config:
   worker-temp:
