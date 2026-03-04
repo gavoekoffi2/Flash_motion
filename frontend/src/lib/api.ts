@@ -1,6 +1,19 @@
 import type { User, Project, Asset, Storyboard, RenderJob } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+function getApiBase(): string {
+  // Explicit env var takes priority
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  // In the browser on a deployed site, use relative /api (Netlify proxy)
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
+    return "/api";
+  }
+  // Local development fallback
+  return "http://localhost:4000/api";
+}
+
+const API_BASE = getApiBase();
 
 class ApiClient {
   private token: string | null = null;
@@ -34,10 +47,17 @@ class ApiClient {
       headers["Content-Type"] = "application/json";
     }
 
-    const res = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers,
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers,
+      });
+    } catch {
+      throw new Error(
+        "Impossible de contacter le serveur. Vérifiez votre connexion ou réessayez plus tard.",
+      );
+    }
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({ error: res.statusText }));
