@@ -1,4 +1,4 @@
-# Build context: .. (repo root, set in docker-compose)
+# Build context: . (repo root, set in CI workflow)
 FROM node:20-bullseye
 
 # Install Chromium for Remotion + ffmpeg
@@ -29,7 +29,7 @@ COPY backend/prisma ./backend/prisma
 # Copy worker package and install deps
 COPY workers/remotion-worker/package*.json ./workers/remotion-worker/
 WORKDIR /app/workers/remotion-worker
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # Generate Prisma client using the schema
 RUN npx prisma generate --schema=/app/backend/prisma/schema.prisma
