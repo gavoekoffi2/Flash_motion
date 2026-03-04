@@ -60,8 +60,31 @@ class ApiClient {
     }
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(body.error || `Request failed: ${res.status}`);
+      // Try to parse JSON error body; if it's an HTML page (proxy/CDN error), fall through
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const body = await res.json().catch(() => null);
+        if (body?.error) throw new Error(body.error);
+      }
+
+      switch (res.status) {
+        case 401:
+          throw new Error("Session expirée. Veuillez vous reconnecter.");
+        case 403:
+          throw new Error("Accès refusé.");
+        case 404:
+          throw new Error(
+            "Service indisponible (404). Le serveur backend n'est pas encore configuré ou la route est introuvable.",
+          );
+        case 429:
+          throw new Error("Trop de requêtes. Veuillez patienter quelques instants.");
+        case 502:
+        case 503:
+        case 504:
+          throw new Error("Le serveur backend est temporairement indisponible. Réessayez dans quelques instants.");
+        default:
+          throw new Error(`Erreur serveur (${res.status}). Veuillez réessayer.`);
+      }
     }
 
     return res.json();
