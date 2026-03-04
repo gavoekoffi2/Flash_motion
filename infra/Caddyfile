@@ -1,3 +1,3 @@
-{$API_DOMAIN:api.flashmotion.dev} {
+{$API_DOMAIN:api.finablasolution.cloud} {
   reverse_proxy backend:4000
 }

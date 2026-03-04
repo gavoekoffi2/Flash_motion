@@ -109,7 +109,7 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     environment:
-      API_DOMAIN: ${API_DOMAIN:-api.flashmotion.dev}
+      API_DOMAIN: ${API_DOMAIN:-api.finablasolution.cloud}
 
   # ── Remotion Render Worker ──
   worker:
