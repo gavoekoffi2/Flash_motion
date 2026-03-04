@@ -79,14 +79,18 @@ async function resolveAssetUrls(assets: RenderJobData["assets"]): Promise<Record
   return urls;
 }
 
-// ── Determine composition based on aspect ratio ──
-function getCompositionId(aspectRatio: string): string {
+// ── Template registry ──
+const TEMPLATES = ["HeroPromo", "Testimonial", "EcommerceShowcase", "Educational", "SaasLaunch"];
+
+// ── Determine composition based on template + aspect ratio ──
+function getCompositionId(aspectRatio: string, template?: string): string {
+  const base = template && TEMPLATES.includes(template) ? template : "HeroPromo";
   switch (aspectRatio) {
-    case "16:9": return "HeroPromo-16x9";
-    case "1:1": return "HeroPromo-1x1";
+    case "16:9": return `${base}-16x9`;
+    case "1:1": return `${base}-1x1`;
     case "9:16":
     default:
-      return "HeroPromo";
+      return base;
   }
 }
 
@@ -136,7 +140,10 @@ async function processRender(job: Job<RenderJobData>) {
       0,
     );
     const fps = 30;
-    const compositionId = getCompositionId(storyboard.aspect_ratio);
+    // Get template from project in DB
+    const projectRecord = await prisma.project.findUnique({ where: { id: projectId }, select: { template: true } });
+    const template = projectRecord?.template || "HeroPromo";
+    const compositionId = getCompositionId(storyboard.aspect_ratio, template);
 
     // 4. Select composition
     const composition = await selectComposition({

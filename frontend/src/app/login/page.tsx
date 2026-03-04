@@ -76,12 +76,19 @@ export default function LoginPage() {
             {loading ? "Connexion..." : "Se connecter"}
           </button>
 
-          <p className="text-center text-sm text-gray-400">
-            Pas encore de compte ?{" "}
-            <Link href="/register" className="text-brand-400 hover:underline">
-              S&apos;inscrire
-            </Link>
-          </p>
+          <div className="text-center space-y-2">
+            <p className="text-sm text-gray-400">
+              Pas encore de compte ?{" "}
+              <Link href="/register" className="text-brand-400 hover:underline">
+                S&apos;inscrire
+              </Link>
+            </p>
+            <p>
+              <Link href="/forgot-password" className="text-xs text-gray-500 hover:text-gray-300">
+                Mot de passe oublié ?
+              </Link>
+            </p>
+          </div>
         </form>
       </div>
     </div>

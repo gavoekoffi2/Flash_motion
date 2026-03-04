@@ -32,10 +32,26 @@ export const env = {
   ollamaUrl: process.env.OLLAMA_URL || "http://localhost:11434",
   ollamaModel: process.env.OLLAMA_MODEL || "mistral",
 
+  // TTS
+  ttsEngine: (process.env.TTS_ENGINE || "none") as "none" | "elevenlabs" | "piper",
+  elevenlabsApiKey: process.env.ELEVENLABS_API_KEY || "",
+  piperModel: process.env.PIPER_MODEL || "fr_FR-upmc-medium",
+
+  // Email (SMTP)
+  smtpHost: process.env.SMTP_HOST || "",
+  smtpPort: parseInt(process.env.SMTP_PORT || "587", 10),
+  smtpUser: process.env.SMTP_USER || "",
+  smtpPass: process.env.SMTP_PASS || "",
+  smtpFrom: process.env.SMTP_FROM || "noreply@flashmotion.dev",
+
+  // Limits
   maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || "8", 10),
   maxAssetsPerProject: parseInt(process.env.MAX_ASSETS_PER_PROJECT || "20", 10),
   maxConcurrentRenders: parseInt(process.env.MAX_CONCURRENT_RENDERS || "1", 10),
   renderTimeoutMs: parseInt(process.env.RENDER_TIMEOUT_MS || "300000", 10),
   tempDir: process.env.TEMP_DIR || "/tmp/flash-motion",
   retentionDays: parseInt(process.env.RETENTION_DAYS || "30", 10),
+
+  // App URL (for email links)
+  appUrl: process.env.APP_URL || process.env.FRONTEND_URL || "http://localhost:3000",
 } as const;
