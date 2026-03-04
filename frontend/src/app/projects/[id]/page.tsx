@@ -36,7 +36,7 @@ export default function ProjectPage() {
     try {
       const { project: p } = await api.getProject(projectId);
       setProject(p);
-      if (p.renderJobs?.length > 0) setRenderJob(p.renderJobs[0]);
+      if (p.renderJobs && p.renderJobs.length > 0) setRenderJob(p.renderJobs[0]);
     } catch (err: any) {
       toast(err.message, "error");
     }

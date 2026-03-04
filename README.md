@@ -1,44 +1,44 @@
 # Flash Motion — Text to Motion Design Video SaaS
 
-Plateforme SaaS permettant de transformer un script texte en vidéo motion design professionnelle (MP4), avec support d'assets personnalisés (images produit, logo, audio).
+Plateforme SaaS permettant de transformer un script texte en vidéo motion design professionnelle (MP4), avec templates, assets personnalisés, TTS et export multi-format.
 
 ## Architecture
 
 ```
 flash-motion/
-├── backend/          # Express API (Auth, Projects, Assets, LLM, Render Queue)
-│   ├── prisma/       # Database schema (PostgreSQL)
+├── backend/              # Express API (Auth, Projects, Assets, LLM, TTS, Email)
+│   ├── prisma/           # Schema PostgreSQL (User, Project, Asset, RenderJob, Quota)
 │   └── src/
-│       ├── config/   # DB, S3, Redis, env
-│       ├── middleware/# Auth JWT, file upload
-│       ├── routes/   # auth, projects, assets
-│       ├── services/ # LLM (OpenRouter/Ollama), storage (S3), renderQueue (BullMQ)
-│       └── utils/
-├── frontend/         # Next.js 14 (App Router, Tailwind CSS)
+│       ├── config/       # DB, S3, Redis, env
+│       ├── middleware/    # Auth JWT, file upload (multer)
+│       ├── routes/       # auth, projects, assets, admin
+│       ├── services/     # LLM, storage, renderQueue, TTS, email, quota
+│       └── index.ts      # Express app entry
+├── frontend/             # Next.js 14 (App Router, Tailwind CSS)
 │   └── src/
-│       ├── app/      # Pages: login, register, dashboard, projects/[id], projects/new
-│       ├── components/# AssetUploader, AssetManager, StoryboardEditor
-│       ├── hooks/    # useAuth (Zustand)
-│       └── lib/      # API client
+│       ├── app/          # Pages: login, register, dashboard, projects, settings
+│       ├── components/   # TemplateSelector, AssetUploader, StoryboardEditor, Toast
+│       ├── hooks/        # useAuth (Zustand)
+│       └── lib/          # API client, types
 ├── workers/
 │   └── remotion-worker/  # BullMQ worker + Remotion render engine
 │       └── src/
-│           ├── templates/    # HeroPromo template (React/Remotion)
-│           ├── compositions/ # Remotion root + compositions
+│           ├── templates/    # 5 templates (HeroPromo, Testimonial, Ecommerce, Educational, SaasLaunch)
+│           ├── compositions/ # Remotion root (15 compositions = 5 templates × 3 ratios)
 │           └── worker.ts     # Job consumer
-├── infra/            # Docker configs + deployment
-│   ├── docker-compose.dev.yml   # Dev: Postgres, Redis, MinIO
-│   ├── docker-compose.prod.yml  # Prod: full stack
-│   ├── Dockerfile.backend
-│   ├── Dockerfile.frontend
-│   ├── Dockerfile.worker
+├── infra/                # Docker configs + deployment
+│   ├── docker-compose.dev.yml
+│   ├── docker-compose.prod.yml
+│   ├── Dockerfile.backend / .frontend / .worker
 │   └── deploy.sh
-└── demo/             # 3 demo projects (storyboard JSON)
+├── demo/                 # 3 demo projects (storyboard JSON)
+├── netlify.toml          # Netlify deployment config
+└── .env.example          # All environment variables
 ```
 
-## Quick Start (Développement local)
+## Quick Start (Developpement local)
 
-### Prérequis
+### Prerequis
 - Node.js >= 18
 - Docker + Docker Compose
 - (Optionnel) Ollama pour LLM local
@@ -46,46 +46,45 @@ flash-motion/
 ### 1. Cloner et configurer
 
 ```bash
-git clone <repo-url> flash-motion
-cd flash-motion
+git clone https://github.com/gavoekoffi2/Flash_motion.git
+cd Flash_motion
 cp .env.example .env
-# Éditer .env avec vos valeurs
+# Editer .env avec vos valeurs (JWT_SECRET, API keys, etc.)
 ```
 
-### 2. Lancer l'infrastructure (PostgreSQL, Redis, MinIO)
+### 2. Lancer l'infrastructure
 
 ```bash
 docker-compose -f infra/docker-compose.dev.yml up -d
 ```
 
-### 3. Installer les dépendances
+Cela lance : PostgreSQL (port 5432), Redis (port 6379), MinIO (port 9000/9001).
+
+### 3. Installer les dependances
 
 ```bash
-# Backend
-cd backend && npm install && npx prisma db push && cd ..
+# Depuis la racine (workspaces)
+npm install
 
-# Frontend
-cd frontend && npm install && cd ..
-
-# Worker
-cd workers/remotion-worker && npm install && cd ../..
+# Initialiser la base de donnees
+cd backend && npx prisma db push && cd ..
 ```
 
-### 4. Seed (données de démo)
+### 4. Seed (donnees de demo)
 
 ```bash
 cd backend && npm run db:seed && cd ..
 ```
 
-Compte démo : `demo@flashmotion.dev` / `password123`
+Compte demo : `demo@flashmotion.dev` / `password123`
 
 ### 5. Lancer les services
 
 ```bash
-# Terminal 1 — Backend API
+# Terminal 1 — Backend API (port 4000)
 cd backend && npm run dev
 
-# Terminal 2 — Frontend
+# Terminal 2 — Frontend (port 3000)
 cd frontend && npm run dev
 
 # Terminal 3 — Render Worker
@@ -93,148 +92,54 @@ cd workers/remotion-worker && npm run dev
 ```
 
 - Frontend : http://localhost:3000
-- Backend API : http://localhost:4000
-- MinIO Console : http://localhost:9001
+- Backend API : http://localhost:4000/api
+- MinIO Console : http://localhost:9001 (minioadmin/minioadmin)
 
-## Configuration LLM
+## Configuration
 
-### OpenRouter (recommandé pour production)
+### LLM
 
-```env
-LLM_MODE=openrouter
-OPENROUTER_API_KEY=sk-or-...
-OPENROUTER_MODEL=mistralai/mistral-7b-instruct
-```
+| Mode | Variable | Description |
+|------|----------|-------------|
+| OpenRouter | `LLM_MODE=openrouter` | Cloud, rapide, necessite API key |
+| Ollama | `LLM_MODE=ollama` | Local, gratuit, necessite GPU/CPU |
+| Auto | `LLM_MODE=auto` | Essaie OpenRouter puis fallback Ollama |
 
-Modèles recommandés (coût-efficacité) :
+Modeles recommandes :
 - `mistralai/mistral-7b-instruct` — meilleur ratio perf/prix
 - `meta-llama/llama-2-13b-chat` — alternative open-source
-- `mistralai/mixtral-8x7b-instruct` — plus puissant
 
-### Ollama (local, gratuit)
+### TTS (Text-to-Speech)
 
-```bash
-# Installer Ollama
-curl -fsSL https://ollama.ai/install.sh | sh
+| Engine | Variable | Description |
+|--------|----------|-------------|
+| None | `TTS_ENGINE=none` | Pas de TTS (defaut) |
+| ElevenLabs | `TTS_ENGINE=elevenlabs` | Cloud, haute qualite, necessite API key |
+| Piper | `TTS_ENGINE=piper` | Local, gratuit, necessite binaire piper |
 
-# Télécharger un modèle
-ollama pull mistral
-```
+### Email (SMTP)
 
-```env
-LLM_MODE=ollama
-OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=mistral
-```
-
-### Mode Auto (fallback)
+Pour activer les emails (bienvenue, reset password, notification de rendu) :
 
 ```env
-LLM_MODE=auto
-OPENROUTER_API_KEY=sk-or-...  # Essaie OpenRouter d'abord
-OLLAMA_URL=http://localhost:11434  # Fallback sur Ollama
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your@gmail.com
+SMTP_PASS=app-specific-password
+SMTP_FROM=noreply@flashmotion.dev
 ```
 
-## Storyboard JSON — Format
+## Templates disponibles
 
-Le LLM génère un JSON structuré suivant ce schéma :
+| Template | Usage | Description |
+|----------|-------|-------------|
+| HeroPromo | Marketing, lancement | Hero + features + CTA |
+| Testimonial | Social proof | Avis clients, quotes, etoiles |
+| EcommerceShowcase | E-commerce | Produits, prix, grille |
+| Educational | Formation | Steps, progression, tutoriel |
+| SaasLaunch | Tech, startup | Mockups, features, CTA |
 
-```json
-{
-  "project_title": "Promo Produit X",
-  "aspect_ratio": "9:16",
-  "scenes": [
-    {
-      "id": 1,
-      "duration_s": 4,
-      "type": "hero",
-      "text": "Découvrez le produit X — révolutionnez votre quotidien.",
-      "assets": [{"type":"image","id":"<asset_uuid>","placement":"center","scale":"cover"}],
-      "animation": "fade_in_up",
-      "audio_clip": null,
-      "tts_instruction": "female_african_accent_short"
-    }
-  ],
-  "brand": {"primary_color":"#FF6B35", "logo_id":"<asset_uuid>"},
-  "caption_short": "Découvrez le Produit X ! -30% #promo"
-}
-```
-
-### Types de scène
-| Type | Description |
-|------|-------------|
-| `hero` | Image plein écran + headline + CTA |
-| `carousel` | Slides produits multiples |
-| `feature_list` | Pictos + texte court |
-| `demo` | Screen + caption |
-| `outro` | Logo + call to action final |
-
-### Animations
-`fade_in_up`, `slide_left`, `zoom_in`, `bounce`, `scale_up`, `fade_out`
-
-## Ajouter un template Remotion
-
-1. Créer le composant dans `workers/remotion-worker/src/templates/MonTemplate.tsx`
-2. L'enregistrer dans `workers/remotion-worker/src/compositions/index.ts`
-3. Ajouter la logique de sélection dans `worker.ts` → `getCompositionId()`
-
-Exemple minimal :
-
-```tsx
-import { AbsoluteFill, useCurrentFrame } from "remotion";
-
-export const MonTemplate = ({ scenes, brand, assetUrls }) => {
-  // ... votre logique de rendu
-  return <AbsoluteFill>...</AbsoluteFill>;
-};
-```
-
-## MinIO (S3) — Configuration
-
-### Accès console
-- URL : http://localhost:9001
-- Login : `minioadmin` / `minioadmin`
-
-### Variables d'environnement
-```env
-S3_ENDPOINT=http://localhost:9000
-S3_ACCESS_KEY=minioadmin
-S3_SECRET_KEY=minioadmin
-S3_BUCKET=flash-motion
-```
-
-Le bucket est créé automatiquement au démarrage du backend.
-
-## Quotas & Limites
-
-Configurables par plan (FREE / PRO / ENTERPRISE) dans le modèle `Quota` :
-
-| Paramètre | FREE | PRO (défaut seed) |
-|-----------|------|-----|
-| LLM calls/jour | 20 | 50 |
-| Renders/jour | 5 | 10 |
-| Storage | 500 MB | 1 GB |
-| Max file size | 8 MB | 8 MB |
-| Max assets/projet | 20 | 20 |
-
-## Déploiement VPS (Hostinger KVM2 — 8GB)
-
-```bash
-# Sur le VPS
-git clone <repo> flash-motion
-cd flash-motion
-cp .env.example .env
-# Éditer .env avec les valeurs production (JWT_SECRET, mots de passe, etc.)
-
-cd infra
-chmod +x deploy.sh
-./deploy.sh
-```
-
-### Contraintes 8GB VPS
-- `MAX_CONCURRENT_RENDERS=1` (un seul rendu simultané)
-- Le worker Remotion nécessite Chromium — prévoir ~2GB pour le rendu
-- Cleanup automatique des fichiers temporaires
+Chaque template supporte 3 formats : **9:16** (Stories), **16:9** (YouTube), **1:1** (Instagram).
 
 ## API Endpoints
 
@@ -243,39 +148,80 @@ chmod +x deploy.sh
 |--------|------|-------------|
 | POST | `/api/auth/register` | Inscription |
 | POST | `/api/auth/login` | Connexion |
-| GET | `/api/auth/me` | Profil utilisateur |
+| GET | `/api/auth/me` | Profil + quotas |
+| PUT | `/api/auth/profile` | Modifier profil |
+| PUT | `/api/auth/password` | Changer mot de passe |
+| POST | `/api/auth/forgot-password` | Demander reset |
+| POST | `/api/auth/reset-password` | Reset avec token |
 
 ### Projects
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/projects` | Liste des projets |
-| POST | `/api/projects` | Créer un projet |
-| GET | `/api/projects/:id` | Détails projet |
-| PUT | `/api/projects/:id` | Modifier projet |
-| DELETE | `/api/projects/:id` | Supprimer projet |
-| POST | `/api/projects/:id/generate-storyboard` | Générer storyboard (LLM) |
+| GET | `/api/projects` | Liste paginee |
+| POST | `/api/projects` | Creer projet (+ template) |
+| GET | `/api/projects/:id` | Details + assets + renders |
+| PUT | `/api/projects/:id` | Modifier |
+| DELETE | `/api/projects/:id` | Supprimer (+ cleanup S3) |
+| POST | `/api/projects/:id/duplicate` | Dupliquer |
+| POST | `/api/projects/:id/generate-storyboard` | Generer storyboard (LLM) |
 | PUT | `/api/projects/:id/storyboard` | Modifier storyboard |
-| POST | `/api/projects/:id/render` | Lancer rendu vidéo |
+| POST | `/api/projects/:id/generate-tts` | Generer TTS scenes |
+| POST | `/api/projects/:id/render` | Lancer rendu video |
 | GET | `/api/projects/:id/render/:jobId` | Status du rendu |
 
 ### Assets
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/projects/:id/assets` | Upload assets (multipart) |
-| GET | `/api/projects/:id/assets` | Liste assets (avec URLs signées) |
-| DELETE | `/api/projects/:id/assets/:assetId` | Supprimer asset |
+| POST | `/api/projects/:id/assets` | Upload (multipart, max 8MB) |
+| GET | `/api/projects/:id/assets` | Liste avec URLs signees |
+| DELETE | `/api/projects/:id/assets/:assetId` | Supprimer |
+
+### Admin
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/stats` | Statistiques plateforme |
+| GET | `/api/admin/users` | Liste utilisateurs |
+| PUT | `/api/admin/users/:id/quota` | Modifier quotas |
+| PUT | `/api/admin/users/:id/plan` | Modifier plan |
+
+## Deploiement
+
+### Frontend sur Netlify
+
+1. Connecter le repo GitHub dans Netlify
+2. Configurer :
+   - **Build command** : `cd frontend && npm install && npm run build`
+   - **Publish directory** : `frontend/.next`
+   - **Node version** : 20
+3. Ajouter les variables d'environnement (voir ENVIRONMENT.md)
+
+### Backend + Worker sur VPS (Docker)
+
+```bash
+ssh user@your-vps
+git clone <repo> flash-motion && cd flash-motion
+cp .env.example .env
+# Editer .env avec valeurs production
+cd infra && chmod +x deploy.sh && ./deploy.sh
+```
+
+### Contraintes VPS 8GB
+- `MAX_CONCURRENT_RENDERS=1` (un seul rendu simultane)
+- Worker Remotion necessite Chromium (~2GB RAM pour le rendu)
+- Cleanup automatique des fichiers temporaires
 
 ## Stack Technique
 
-- **Backend** : Express.js, Prisma ORM, PostgreSQL
-- **Frontend** : Next.js 14, Tailwind CSS, Zustand
-- **Render** : Remotion (React → video), BullMQ (Redis queue)
-- **Storage** : MinIO (S3-compatible)
+- **Backend** : Express.js, Prisma ORM, PostgreSQL, BullMQ
+- **Frontend** : Next.js 14, Tailwind CSS, Zustand, react-dropzone
+- **Render** : Remotion (React -> video), 5 templates, 15 compositions
+- **Storage** : MinIO (S3-compatible), signed URLs
 - **LLM** : OpenRouter (Mistral/Llama) + Ollama fallback
+- **TTS** : ElevenLabs + Piper
+- **Email** : Nodemailer (SMTP)
 - **Auth** : JWT + bcrypt
-- **Validation** : Zod
-- **Image processing** : Sharp
+- **Validation** : Zod (backend), TypeScript strict (frontend)
 
 ## Licence
 
-Propriétaire — Flash Motion
+Proprietaire — Flash Motion

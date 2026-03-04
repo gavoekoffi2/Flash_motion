@@ -42,7 +42,7 @@ export default function SettingsPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.updateProfile({ name: name || undefined, email: email !== user.email ? email : undefined });
+      await api.updateProfile({ name: name || undefined, email: email !== user!.email ? email : undefined });
       toast("Profil mis à jour", "success");
       checkAuth();
     } catch (err: any) {

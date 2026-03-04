@@ -1,0 +1,40 @@
+# ── Flash Motion — Netlify Deployment Config ──
+# Frontend: Next.js 14 deployed on Netlify
+# Backend: Deployed separately on VPS (Docker)
+
+[build]
+  base = "frontend"
+  command = "npm install && npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Netlify Next.js runtime plugin — handles SSR, API routes, image optimization
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Proxy API calls to backend VPS
+[[redirects]]
+  from = "/api/*"
+  to = "${BACKEND_URL}/api/:splat"
+  status = 200
+  force = true
+  [redirects.headers]
+    X-Forwarded-Host = "flashmotion.netlify.app"
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# Cache static assets
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
