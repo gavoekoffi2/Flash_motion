@@ -1,26 +1,27 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import Navbar from "@/components/landing/Navbar";
+import HeroSection from "@/components/landing/HeroSection";
+import FeaturesSection from "@/components/landing/FeaturesSection";
+import HowItWorksSection from "@/components/landing/HowItWorksSection";
+import ShowcaseSection from "@/components/landing/ShowcaseSection";
+import TestimonialsSection from "@/components/landing/TestimonialsSection";
+import PricingSection from "@/components/landing/PricingSection";
+import CTASection from "@/components/landing/CTASection";
+import Footer from "@/components/landing/Footer";
 
 export default function Home() {
-  const router = useRouter();
-  const { user, loading, checkAuth } = useAuth();
-
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
-  useEffect(() => {
-    if (!loading) {
-      router.push(user ? "/dashboard" : "/login");
-    }
-  }, [user, loading, router]);
-
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-pulse text-xl text-gray-400">Chargement...</div>
-    </div>
+    <main className="bg-dark-950 min-h-screen">
+      <Navbar />
+      <HeroSection />
+      <FeaturesSection />
+      <HowItWorksSection />
+      <ShowcaseSection />
+      <TestimonialsSection />
+      <PricingSection />
+      <CTASection />
+      <Footer />
+    </main>
   );
 }
