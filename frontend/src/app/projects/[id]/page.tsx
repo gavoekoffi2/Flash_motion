@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/Toast";
 import AssetUploader from "@/components/AssetUploader";
 import AssetManager from "@/components/AssetManager";
 import StoryboardEditor from "@/components/StoryboardEditor";
@@ -14,6 +15,7 @@ export default function ProjectPage() {
   const { user, loading, checkAuth } = useAuth();
   const router = useRouter();
   const params = useParams();
+  const { toast } = useToast();
   const projectId = params.id as string;
 
   const [project, setProject] = useState<any>(null);
@@ -23,7 +25,9 @@ export default function ProjectPage() {
   const [savingStoryboard, setSavingStoryboard] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [renderJob, setRenderJob] = useState<any>(null);
-  const [error, setError] = useState("");
+  const [editingScript, setEditingScript] = useState(false);
+  const [scriptDraft, setScriptDraft] = useState("");
+  const [savingScript, setSavingScript] = useState(false);
 
   useEffect(() => { checkAuth(); }, [checkAuth]);
   useEffect(() => { if (!loading && !user) router.push("/login"); }, [user, loading, router]);
@@ -32,11 +36,11 @@ export default function ProjectPage() {
     try {
       const { project: p } = await api.getProject(projectId);
       setProject(p);
-      if (p.renderJobs?.length > 0) setRenderJob(p.renderJobs[0]);
+      if (p.renderJobs && p.renderJobs.length > 0) setRenderJob(p.renderJobs[0]);
     } catch (err: any) {
-      setError(err.message);
+      toast(err.message, "error");
     }
-  }, [projectId]);
+  }, [projectId, toast]);
 
   const loadAssets = useCallback(async () => {
     try {
@@ -61,7 +65,11 @@ export default function ProjectPage() {
       try {
         const { renderJob: updated } = await api.getRenderStatus(projectId, renderJob.id);
         setRenderJob(updated);
-        if (updated.status === "DONE" || updated.status === "FAILED") {
+        if (updated.status === "DONE") {
+          toast("Vidéo prête au téléchargement !", "success");
+          loadProject();
+        } else if (updated.status === "FAILED") {
+          toast("Le rendu a échoué", "error");
           loadProject();
         }
       } catch (err) {
@@ -69,21 +77,21 @@ export default function ProjectPage() {
       }
     }, 3000);
     return () => clearInterval(interval);
-  }, [renderJob, projectId, loadProject]);
+  }, [renderJob, projectId, loadProject, toast]);
 
   if (loading || !user || !project) {
     return <div className="flex items-center justify-center min-h-screen text-gray-400">Chargement...</div>;
   }
 
   async function handleGenerateStoryboard() {
-    setError("");
     setGenerating(true);
     try {
       const { storyboard } = await api.generateStoryboard(projectId);
       setProject({ ...project, storyboard, status: "STORYBOARD_READY" });
       setTab("storyboard");
+      toast("Storyboard généré avec succès", "success");
     } catch (err: any) {
-      setError(err.message);
+      toast(err.message, "error");
     } finally {
       setGenerating(false);
     }
@@ -94,34 +102,57 @@ export default function ProjectPage() {
     try {
       await api.updateStoryboard(projectId, storyboard);
       setProject({ ...project, storyboard });
+      toast("Storyboard sauvegardé", "success");
     } catch (err: any) {
-      setError(err.message);
+      toast(err.message, "error");
     } finally {
       setSavingStoryboard(false);
     }
   }
 
   async function handleStartRender() {
-    setError("");
     setRendering(true);
     try {
       const { renderJob: job } = await api.startRender(projectId);
       setRenderJob(job);
       setProject({ ...project, status: "RENDERING" });
       setTab("render");
+      toast("Rendu lancé", "info");
     } catch (err: any) {
-      setError(err.message);
+      toast(err.message, "error");
     } finally {
       setRendering(false);
     }
   }
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "script", label: "Script" },
-    { key: "assets", label: `Assets (${assets.length})` },
-    { key: "storyboard", label: "Storyboard" },
-    { key: "render", label: "Rendu" },
+  async function handleSaveScript() {
+    setSavingScript(true);
+    try {
+      await api.updateProject(projectId, { script: scriptDraft });
+      setProject({ ...project, script: scriptDraft });
+      setEditingScript(false);
+      toast("Script mis à jour", "success");
+    } catch (err: any) {
+      toast(err.message, "error");
+    } finally {
+      setSavingScript(false);
+    }
+  }
+
+  const tabs: { key: Tab; label: string; icon: string }[] = [
+    { key: "script", label: "Script", icon: "\u270F" },
+    { key: "assets", label: `Assets (${assets.length})`, icon: "\uD83D\uDDBC" },
+    { key: "storyboard", label: "Storyboard", icon: "\uD83C\uDFAC" },
+    { key: "render", label: "Rendu", icon: "\u25B6" },
   ];
+
+  const renderProgress = renderJob ? {
+    QUEUED: { pct: 10, label: "En file d'attente...", color: "bg-blue-500" },
+    RENDERING: { pct: 50, label: "Rendu vidéo en cours...", color: "bg-yellow-500" },
+    UPLOADING: { pct: 85, label: "Upload de la vidéo...", color: "bg-brand-500" },
+    DONE: { pct: 100, label: "Terminé !", color: "bg-green-500" },
+    FAILED: { pct: 100, label: "Échoué", color: "bg-red-500" },
+  }[renderJob.status as string] || { pct: 0, label: "", color: "bg-gray-500" } : null;
 
   return (
     <div className="min-h-screen">
@@ -132,14 +163,16 @@ export default function ProjectPage() {
             <button onClick={() => router.push("/dashboard")} className="text-gray-400 hover:text-white">&larr;</button>
             <div>
               <h1 className="font-semibold">{project.title}</h1>
-              <span className="text-xs text-gray-500">{project.aspectRatio} &middot; {project.status}</span>
+              <span className="text-xs text-gray-500">
+                {project.aspectRatio} &middot; {project.template || "HeroPromo"} &middot; {project.status}
+              </span>
             </div>
           </div>
           <div className="flex gap-2">
             {project.storyboard && (
               <button
                 onClick={handleStartRender}
-                disabled={rendering}
+                disabled={rendering || project.status === "RENDERING"}
                 className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm transition-colors"
               >
                 {rendering ? "Lancement..." : "Lancer le rendu"}
@@ -155,12 +188,13 @@ export default function ProjectPage() {
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`px-4 py-2 text-sm border-b-2 transition-colors ${
+                className={`px-4 py-2 text-sm border-b-2 transition-colors flex items-center gap-1.5 ${
                   tab === t.key
                     ? "border-brand-500 text-brand-400"
                     : "border-transparent text-gray-400 hover:text-white"
                 }`}
               >
+                <span>{t.icon}</span>
                 {t.label}
               </button>
             ))}
@@ -170,23 +204,55 @@ export default function ProjectPage() {
 
       {/* Content */}
       <main className="max-w-5xl mx-auto px-4 py-6">
-        {error && (
-          <div className="bg-red-900/30 border border-red-800 text-red-300 px-4 py-2 rounded-lg text-sm mb-4">{error}</div>
-        )}
-
         {/* Script Tab */}
         {tab === "script" && (
           <div className="space-y-4 animate-fade-in">
             <div className="bg-dark-800 rounded-xl p-6 border border-dark-700">
-              <h3 className="text-sm text-gray-400 mb-2">Script du projet</h3>
-              <pre className="whitespace-pre-wrap text-sm leading-relaxed">{project.script}</pre>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm text-gray-400">Script du projet</h3>
+                {!editingScript && (
+                  <button
+                    onClick={() => { setScriptDraft(project.script); setEditingScript(true); }}
+                    className="text-xs text-brand-400 hover:text-brand-300"
+                  >
+                    Modifier
+                  </button>
+                )}
+              </div>
+              {editingScript ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={scriptDraft}
+                    onChange={(e) => setScriptDraft(e.target.value)}
+                    rows={12}
+                    className="w-full bg-dark-900 border border-dark-700 rounded-lg px-4 py-3 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveScript}
+                      disabled={savingScript}
+                      className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm"
+                    >
+                      {savingScript ? "Sauvegarde..." : "Sauvegarder"}
+                    </button>
+                    <button
+                      onClick={() => setEditingScript(false)}
+                      className="text-gray-400 hover:text-white px-4 py-2 text-sm"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <pre className="whitespace-pre-wrap text-sm leading-relaxed">{project.script}</pre>
+              )}
             </div>
             <button
               onClick={handleGenerateStoryboard}
               disabled={generating}
               className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white px-6 py-3 rounded-lg font-medium transition-colors"
             >
-              {generating ? "Génération en cours..." : "Générer le Storyboard (IA)"}
+              {generating ? "Génération en cours..." : project.storyboard ? "Re-générer le Storyboard (IA)" : "Générer le Storyboard (IA)"}
             </button>
             {generating && (
               <div className="bg-dark-800 rounded-lg p-4 border border-dark-700">
@@ -202,7 +268,7 @@ export default function ProjectPage() {
         {/* Assets Tab */}
         {tab === "assets" && (
           <div className="space-y-6 animate-fade-in">
-            <AssetUploader projectId={projectId} onUploaded={loadAssets} />
+            <AssetUploader projectId={projectId} onUploaded={() => { loadAssets(); toast("Assets uploadés", "success"); }} />
             <AssetManager projectId={projectId} assets={assets} onChanged={loadAssets} />
           </div>
         )}
@@ -213,6 +279,7 @@ export default function ProjectPage() {
             {project.storyboard ? (
               <StoryboardEditor
                 storyboard={project.storyboard}
+                assets={assets}
                 onSave={handleSaveStoryboard}
                 saving={savingStoryboard}
               />
@@ -247,39 +314,65 @@ export default function ProjectPage() {
                   </span>
                 </div>
 
-                {(renderJob.status === "QUEUED" || renderJob.status === "RENDERING" || renderJob.status === "UPLOADING") && (
+                {renderProgress && renderJob.status !== "DONE" && renderJob.status !== "FAILED" && (
                   <div>
-                    <div className="h-2 bg-dark-700 rounded-full overflow-hidden">
-                      <div className="h-full bg-brand-500 rounded-full animate-pulse-bar"></div>
+                    <div className="h-2.5 bg-dark-700 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${renderProgress.color} rounded-full transition-all duration-500`}
+                        style={{ width: `${renderProgress.pct}%` }}
+                      />
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      {renderJob.status === "QUEUED" && "En attente dans la file..."}
-                      {renderJob.status === "RENDERING" && "Rendu vidéo en cours..."}
-                      {renderJob.status === "UPLOADING" && "Upload de la vidéo..."}
-                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-gray-500">{renderProgress.label}</p>
+                      <p className="text-xs text-gray-500">{renderProgress.pct}%</p>
+                    </div>
                   </div>
                 )}
 
                 {renderJob.status === "DONE" && renderJob.downloadUrl && (
-                  <div className="space-y-3">
-                    <p className="text-green-400 text-sm">Vidéo prête !</p>
-                    <a
-                      href={renderJob.downloadUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-                    >
-                      Télécharger MP4
-                    </a>
+                  <div className="space-y-4">
+                    <div className="bg-green-900/20 border border-green-800 rounded-lg p-4">
+                      <p className="text-green-400 text-sm font-medium mb-1">Vidéo prête !</p>
+                      <p className="text-xs text-gray-400">
+                        Rendu terminé le {renderJob.finishedAt ? new Date(renderJob.finishedAt).toLocaleString("fr-FR") : ""}
+                      </p>
+                    </div>
+
+                    {/* Video preview */}
+                    <div className="bg-dark-900 rounded-lg overflow-hidden border border-dark-700">
+                      <video
+                        src={renderJob.downloadUrl}
+                        controls
+                        className="w-full max-h-[500px]"
+                        poster=""
+                      />
+                    </div>
+
+                    <div className="flex gap-3">
+                      <a
+                        href={renderJob.downloadUrl}
+                        download
+                        className="flex-1 text-center bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                      >
+                        Télécharger MP4
+                      </a>
+                      <button
+                        onClick={handleStartRender}
+                        className="bg-dark-700 hover:bg-dark-900 text-gray-300 px-4 py-3 rounded-lg text-sm"
+                      >
+                        Re-rendre
+                      </button>
+                    </div>
                   </div>
                 )}
 
                 {renderJob.status === "FAILED" && (
-                  <div>
-                    <p className="text-red-400 text-sm">{renderJob.error || "Le rendu a échoué"}</p>
+                  <div className="bg-red-900/20 border border-red-800 rounded-lg p-4">
+                    <p className="text-red-400 text-sm font-medium mb-1">Le rendu a échoué</p>
+                    <p className="text-xs text-gray-400 mb-3">{renderJob.error || "Erreur inconnue"}</p>
                     <button
                       onClick={handleStartRender}
-                      className="mt-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm"
+                      className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm"
                     >
                       Relancer le rendu
                     </button>

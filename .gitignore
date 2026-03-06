@@ -1,21 +1,54 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 dist/
+*.tsbuildinfo
 build/
 .next/
+out/
+
+# Environment files
 .env
 .env.local
 .env.*.local
+
+# Logs
 *.log
 npm-debug.log*
+
+# OS files
 .DS_Store
 Thumbs.db
+
+# Temp files
 tmp/
 temp/
+/tmp/
+
+# Generated media (keep demo files)
 *.mp4
 *.mov
 !demo/**/*.mp4
+
+# Test coverage
 coverage/
 .nyc_output/
+
+# Docker volumes (local dev)
 minio-data/
 redis-data/
 postgres-data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Netlify
+.netlify/
+
+# Prisma
+*.db
+*.db-journal

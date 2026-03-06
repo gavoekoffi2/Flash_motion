@@ -30,7 +30,6 @@ class ApiClient {
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    // Set Content-Type for non-FormData requests
     if (!(options.body instanceof FormData)) {
       headers["Content-Type"] = "application/json";
     }
@@ -75,6 +74,34 @@ class ApiClient {
     this.setToken(null);
   }
 
+  async updateProfile(data: { name?: string; email?: string }) {
+    return this.request<{ user: User }>("/auth/profile", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async changePassword(currentPassword: string, newPassword: string) {
+    return this.request<{ message: string }>("/auth/password", {
+      method: "PUT",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  async forgotPassword(email: string) {
+    return this.request<{ message: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    return this.request<{ message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, newPassword }),
+    });
+  }
+
   // ── Projects ──
   async listProjects(page = 1, limit = 20) {
     return this.request<{ projects: Project[]; total: number; page: number; limit: number }>(
@@ -86,7 +113,7 @@ class ApiClient {
     return this.request<{ project: Project }>(`/projects/${encodeURIComponent(id)}`);
   }
 
-  async createProject(data: { title: string; script: string; aspectRatio?: string }) {
+  async createProject(data: { title: string; script: string; aspectRatio?: string; template?: string }) {
     return this.request<{ project: Project }>("/projects", {
       method: "POST",
       body: JSON.stringify(data),
@@ -102,6 +129,12 @@ class ApiClient {
 
   async deleteProject(id: string) {
     return this.request<{ message: string }>(`/projects/${encodeURIComponent(id)}`, { method: "DELETE" });
+  }
+
+  async duplicateProject(id: string) {
+    return this.request<{ project: Project }>(`/projects/${encodeURIComponent(id)}/duplicate`, {
+      method: "POST",
+    });
   }
 
   // ── Storyboard ──

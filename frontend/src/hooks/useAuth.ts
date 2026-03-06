@@ -2,9 +2,10 @@
 
 import { create } from "zustand";
 import { api } from "@/lib/api";
+import type { User } from "@/lib/types";
 
 interface AuthState {
-  user: any | null;
+  user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;

@@ -5,7 +5,9 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "http", hostname: "localhost", port: "9000" },
       { protocol: "https", hostname: "**.amazonaws.com" },
+      { protocol: "https", hostname: "**.netlify.app" },
     ],
+    unoptimized: process.env.NETLIFY === "true",
   },
   async headers() {
     return [

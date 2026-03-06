@@ -8,16 +8,19 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  password  String
-  name      String?
-  role      Role      @default(USER)
-  plan      Plan      @default(FREE)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  projects  Project[]
-  quota     Quota?
+  id             String    @id @default(uuid())
+  email          String    @unique
+  password       String
+  name           String?
+  role           Role      @default(USER)
+  plan           Plan      @default(FREE)
+  avatarUrl      String?
+  resetToken     String?
+  resetTokenExp  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  projects       Project[]
+  quota          Quota?
 }
 
 model Quota {
@@ -39,10 +42,12 @@ model Project {
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
   script      String        @db.Text
+  template    String        @default("HeroPromo")
   aspectRatio String        @default("9:16")
   status      ProjectStatus @default(DRAFT)
   storyboard  Json?
   brandConfig Json?
+  shareToken  String?       @unique
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   assets      Asset[]

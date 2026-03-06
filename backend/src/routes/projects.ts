@@ -6,16 +6,20 @@ import { generateStoryboard } from "../services/llm";
 import { enqueueRender, RenderJobData } from "../services/renderQueue";
 import { generateOutputKey, getSignedDownloadUrl, deleteFromS3 } from "../services/storage";
 import { checkAndResetQuota } from "../services/quota";
+import { generateProjectTTS } from "../services/tts";
 
 const router = Router();
 router.use(authMiddleware);
 
 // ── Validation schemas ──
 
+const VALID_TEMPLATES = ["HeroPromo", "Testimonial", "EcommerceShowcase", "Educational", "SaasLaunch"] as const;
+
 const createProjectSchema = z.object({
   title: z.string().min(1).max(200),
   script: z.string().min(10).max(10000),
   aspectRatio: z.enum(["9:16", "16:9", "1:1"]).default("9:16"),
+  template: z.enum(VALID_TEMPLATES).default("HeroPromo"),
   brandConfig: z.object({
     primary_color: z.string().optional(),
     logo_id: z.string().optional(),
@@ -96,6 +100,7 @@ router.post("/", async (req: Request, res: Response) => {
         title: data.title,
         script: data.script,
         aspectRatio: data.aspectRatio,
+        template: data.template,
         brandConfig: data.brandConfig || undefined,
       },
     });
@@ -152,6 +157,33 @@ router.put("/:id", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Validation error", details: err.errors });
     }
     console.error("[Projects] Update error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /api/projects/:id/duplicate — duplicate a project ──
+router.post("/:id/duplicate", async (req: Request, res: Response) => {
+  try {
+    const original = await prisma.project.findFirst({
+      where: { id: req.params.id, userId: req.user!.userId },
+    });
+    if (!original) return res.status(404).json({ error: "Project not found" });
+
+    const project = await prisma.project.create({
+      data: {
+        userId: req.user!.userId,
+        title: `${original.title} (copie)`,
+        script: original.script,
+        aspectRatio: original.aspectRatio,
+        template: original.template,
+        storyboard: original.storyboard || undefined,
+        brandConfig: original.brandConfig || undefined,
+        status: original.storyboard ? "STORYBOARD_READY" : "DRAFT",
+      },
+    });
+    return res.status(201).json({ project });
+  } catch (err) {
+    console.error("[Projects] Duplicate error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -274,6 +306,46 @@ router.put("/:id/storyboard", async (req: Request, res: Response) => {
     }
     console.error("[Projects] Update storyboard error:", err);
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /api/projects/:id/generate-tts — generate TTS for storyboard scenes ──
+router.post("/:id/generate-tts", async (req: Request, res: Response) => {
+  try {
+    const project = await prisma.project.findFirst({
+      where: { id: req.params.id, userId: req.user!.userId },
+    });
+    if (!project) return res.status(404).json({ error: "Project not found" });
+    if (!project.storyboard) {
+      return res.status(400).json({ error: "Generate storyboard first" });
+    }
+
+    const storyboard = project.storyboard as any;
+    const results = await generateProjectTTS(storyboard.scenes, project.id);
+
+    // Update storyboard with TTS audio_clip references
+    if (Object.keys(results).length > 0) {
+      const updatedScenes = storyboard.scenes.map((scene: any) => {
+        const ttsResult = results[scene.id];
+        if (ttsResult) {
+          return { ...scene, audio_clip: ttsResult.s3Key };
+        }
+        return scene;
+      });
+
+      await prisma.project.update({
+        where: { id: project.id },
+        data: { storyboard: { ...storyboard, scenes: updatedScenes } },
+      });
+    }
+
+    return res.json({
+      message: `TTS generated for ${Object.keys(results).length} scenes`,
+      results,
+    });
+  } catch (err) {
+    console.error("[Projects] TTS generation error:", err);
+    return res.status(500).json({ error: (err as Error).message });
   }
 });
 
