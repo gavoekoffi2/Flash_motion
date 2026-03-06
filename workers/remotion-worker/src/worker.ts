@@ -79,15 +79,22 @@ async function resolveAssetUrls(assets: RenderJobData["assets"]): Promise<Record
   return urls;
 }
 
-// ── Determine composition based on aspect ratio ──
-function getCompositionId(aspectRatio: string): string {
-  switch (aspectRatio) {
-    case "16:9": return "HeroPromo-16x9";
-    case "1:1": return "HeroPromo-1x1";
-    case "9:16":
-    default:
-      return "HeroPromo";
-  }
+// ── Determine composition based on aspect ratio and scene type ──
+function getCompositionId(aspectRatio: string, sceneType?: string): string {
+  const aspectSuffix = aspectRatio === "16:9" ? "-16x9" : aspectRatio === "1:1" ? "-1x1" : "";
+  
+  // Determine template based on first scene type
+  const templateName = sceneType || "HeroPromo";
+  const templateMap: Record<string, string> = {
+    "hero": "HeroPromo",
+    "carousel": "Carousel",
+    "feature_list": "FeatureList",
+    "demo": "Demo",
+    "outro": "Outro",
+  };
+  
+  const template = templateMap[templateName] || "HeroPromo";
+  return template + aspectSuffix;
 }
 
 // ── Timeout wrapper ──
@@ -136,7 +143,8 @@ async function processRender(job: Job<RenderJobData>) {
       0,
     );
     const fps = 30;
-    const compositionId = getCompositionId(storyboard.aspect_ratio);
+    const firstSceneType = storyboard.scenes?.[0]?.type || "hero";
+    const compositionId = getCompositionId(storyboard.aspect_ratio, firstSceneType);
 
     // 4. Select composition
     const composition = await selectComposition({

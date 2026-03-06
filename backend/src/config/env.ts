@@ -32,10 +32,16 @@ export const env = {
   ollamaUrl: process.env.OLLAMA_URL || "http://localhost:11434",
   ollamaModel: process.env.OLLAMA_MODEL || "mistral",
 
+  ttsEngine: (process.env.TTS_ENGINE || "none") as "none" | "elevenlabs" | "piper",
+  elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || "",
+
   maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || "8", 10),
   maxAssetsPerProject: parseInt(process.env.MAX_ASSETS_PER_PROJECT || "20", 10),
   maxConcurrentRenders: parseInt(process.env.MAX_CONCURRENT_RENDERS || "1", 10),
   renderTimeoutMs: parseInt(process.env.RENDER_TIMEOUT_MS || "300000", 10),
   tempDir: process.env.TEMP_DIR || "/tmp/flash-motion",
   retentionDays: parseInt(process.env.RETENTION_DAYS || "30", 10),
+
+  // Logging & Monitoring
+  sentryDsn: process.env.SENTRY_DSN || "",
 } as const;

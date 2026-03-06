@@ -1,5 +1,4 @@
 "use client";
-
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { api } from "@/lib/api";
@@ -21,54 +20,186 @@ const ACCEPTED = {
   "application/x-font-ttf": [".ttf"],
 };
 
+interface UploadProgress {
+  fileName: string;
+  progress: number;
+  status: "pending" | "uploading" | "success" | "error";
+  error?: string;
+}
+
 export default function AssetUploader({ projectId, onUploaded }: Props) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
 
-  const onDrop = useCallback(async (files: File[]) => {
-    if (files.length === 0) return;
-    setError("");
-    setUploading(true);
-    try {
-      await api.uploadAssets(projectId, files);
-      onUploaded();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setUploading(false);
-    }
-  }, [projectId, onUploaded]);
+  const onDrop = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return;
+
+      setError("");
+      setUploading(true);
+
+      // Initialize progress tracking
+      const initialProgress: UploadProgress[] = files.map((f) => ({
+        fileName: f.name,
+        progress: 0,
+        status: "pending",
+      }));
+      setUploadProgress(initialProgress);
+
+      try {
+        // Upload files with progress tracking
+        const uploadPromises = files.map(async (file, index) => {
+          try {
+            setUploadProgress((prev) => {
+              const updated = [...prev];
+              updated[index] = { ...updated[index], status: "uploading", progress: 0 };
+              return updated;
+            });
+
+            await api.uploadAssets(projectId, [file]);
+
+            setUploadProgress((prev) => {
+              const updated = [...prev];
+              updated[index] = { ...updated[index], status: "success", progress: 100 };
+              return updated;
+            });
+          } catch (err: any) {
+            setUploadProgress((prev) => {
+              const updated = [...prev];
+              updated[index] = {
+                ...updated[index],
+                status: "error",
+                error: err.message || "Erreur lors de l'upload",
+              };
+              return updated;
+            });
+          }
+        });
+
+        await Promise.all(uploadPromises);
+
+        // Check if all uploads were successful
+        const allSuccessful = uploadProgress.every((p) => p.status === "success");
+        if (allSuccessful) {
+          onUploaded();
+          setUploadProgress([]);
+        }
+      } catch (err: any) {
+        setError(err.message || "Erreur lors de l'upload des fichiers");
+      } finally {
+        setUploading(false);
+      }
+    },
+    [projectId, onUploaded, uploadProgress]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: ACCEPTED,
-    maxSize: 8 * 1024 * 1024,
+    maxSize: 8 * 1024 * 1024, // 8 MB
     maxFiles: 10,
+    disabled: uploading,
   });
 
   return (
-    <div>
+    <div className="space-y-4">
+      {/* Dropzone */}
       <div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-          isDragActive ? "border-brand-500 bg-brand-500/5" : "border-dark-700 hover:border-gray-500"
-        }`}
+        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+          isDragActive
+            ? "border-brand-500 bg-brand-500/10 scale-105"
+            : "border-dark-700 hover:border-gray-500 hover:bg-dark-800/50"
+        } ${uploading ? "opacity-50 cursor-not-allowed" : ""}`}
       >
         <input {...getInputProps()} />
         {uploading ? (
-          <p className="text-brand-400">Upload en cours...</p>
-        ) : isDragActive ? (
-          <p className="text-brand-400">Déposez les fichiers ici...</p>
-        ) : (
-          <div>
-            <p className="text-gray-400 mb-1">Glissez-déposez vos fichiers ici</p>
+          <div className="space-y-2">
+            <p className="text-brand-400 font-medium">Upload en cours...</p>
             <p className="text-xs text-gray-500">
-              Images (PNG, JPG, WebP), Logo (SVG), Audio (MP3, WAV), Fonts (WOFF, TTF) — Max 8 MB
+              {uploadProgress.filter((p) => p.status === "success").length} /{" "}
+              {uploadProgress.length} fichiers
+            </p>
+          </div>
+        ) : isDragActive ? (
+          <div className="space-y-2">
+            <p className="text-brand-400 font-medium">Déposez les fichiers ici</p>
+            <p className="text-xs text-gray-500">Ils seront ajoutés à votre projet</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="text-4xl">📁</div>
+            <div>
+              <p className="text-gray-300 font-medium mb-1">
+                Glissez-déposez vos fichiers ici
+              </p>
+              <p className="text-xs text-gray-500 mb-3">
+                ou cliquez pour sélectionner
+              </p>
+            </div>
+            <p className="text-xs text-gray-600 border-t border-dark-700 pt-3">
+              Images (PNG, JPG, WebP, SVG) • Audio (MP3, WAV) • Fonts (WOFF, TTF)
+              <br />
+              Max 8 MB par fichier • 10 fichiers max
             </p>
           </div>
         )}
       </div>
-      {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+
+      {/* Progress List */}
+      {uploadProgress.length > 0 && (
+        <div className="space-y-2 bg-dark-900 rounded-lg p-4 border border-dark-700">
+          {uploadProgress.map((item, idx) => (
+            <div key={idx} className="space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-300 truncate">{item.fileName}</span>
+                <span
+                  className={`text-xs font-medium ${
+                    item.status === "success"
+                      ? "text-green-400"
+                      : item.status === "error"
+                      ? "text-red-400"
+                      : item.status === "uploading"
+                      ? "text-brand-400"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {item.status === "success"
+                    ? "✓ Complété"
+                    : item.status === "error"
+                    ? "✗ Erreur"
+                    : item.status === "uploading"
+                    ? `${item.progress}%`
+                    : "En attente"}
+                </span>
+              </div>
+              <div className="w-full bg-dark-800 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className={`h-full transition-all ${
+                    item.status === "success"
+                      ? "bg-green-500"
+                      : item.status === "error"
+                      ? "bg-red-500"
+                      : "bg-brand-500"
+                  }`}
+                  style={{ width: `${item.progress}%` }}
+                />
+              </div>
+              {item.error && (
+                <p className="text-xs text-red-400">{item.error}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+          <p className="text-red-400 text-sm">{error}</p>
+        </div>
+      )}
     </div>
   );
 }
