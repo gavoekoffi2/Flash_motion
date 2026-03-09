@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import TemplateSelector from "@/components/TemplateSelector";
 
 export default function NewProjectPage() {
-  const { user, loading, checkAuth } = useAuth();
+  const { user, loading } = useRequireAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [step, setStep] = useState<1 | 2>(1);
@@ -18,10 +18,7 @@ export default function NewProjectPage() {
   const [template, setTemplate] = useState("HeroPromo");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { checkAuth(); }, [checkAuth]);
-  useEffect(() => { if (!loading && !user) router.push("/login"); }, [user, loading, router]);
-
-  if (loading || !user) return null;
+  if (loading || !user) return <div className="flex items-center justify-center min-h-screen text-gray-400">Chargement...</div>;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,7 +59,7 @@ export default function NewProjectPage() {
 
             <div>
               <label className="block text-sm text-gray-400 mb-2">Format vidéo</label>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 {[
                   { value: "9:16", label: "Portrait (9:16)", desc: "Stories, Reels, TikTok" },
                   { value: "16:9", label: "Paysage (16:9)", desc: "YouTube, Web" },

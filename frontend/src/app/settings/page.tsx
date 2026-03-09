@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 
 export default function SettingsPage() {
-  const { user, loading, checkAuth } = useAuth();
+  const { user, loading } = useRequireAuth();
+  const { checkAuth } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -22,9 +24,6 @@ export default function SettingsPage() {
 
   const [quota, setQuota] = useState<any>(null);
 
-  useEffect(() => { checkAuth(); }, [checkAuth]);
-  useEffect(() => { if (!loading && !user) router.push("/login"); }, [user, loading, router]);
-
   useEffect(() => {
     if (user) {
       setName(user.name || "");
@@ -36,7 +35,7 @@ export default function SettingsPage() {
     }
   }, [user]);
 
-  if (loading || !user) return null;
+  if (loading || !user) return <div className="flex items-center justify-center min-h-screen text-gray-400">Chargement...</div>;
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();

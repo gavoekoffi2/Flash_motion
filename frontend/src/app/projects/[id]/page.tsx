@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import AssetUploader from "@/components/AssetUploader";
@@ -12,7 +12,7 @@ import StoryboardEditor from "@/components/StoryboardEditor";
 type Tab = "script" | "assets" | "storyboard" | "render";
 
 export default function ProjectPage() {
-  const { user, loading, checkAuth } = useAuth();
+  const { user, loading } = useRequireAuth();
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
@@ -28,9 +28,6 @@ export default function ProjectPage() {
   const [editingScript, setEditingScript] = useState(false);
   const [scriptDraft, setScriptDraft] = useState("");
   const [savingScript, setSavingScript] = useState(false);
-
-  useEffect(() => { checkAuth(); }, [checkAuth]);
-  useEffect(() => { if (!loading && !user) router.push("/login"); }, [user, loading, router]);
 
   const loadProject = useCallback(async () => {
     try {
@@ -87,7 +84,7 @@ export default function ProjectPage() {
     setGenerating(true);
     try {
       const { storyboard } = await api.generateStoryboard(projectId);
-      setProject(prev => prev ? { ...prev, storyboard, status: "STORYBOARD_READY" } : prev);
+      setProject((prev: any) => prev ? { ...prev, storyboard, status: "STORYBOARD_READY" } : prev);
       setTab("storyboard");
       toast("Storyboard généré avec succès", "success");
     } catch (err: any) {
@@ -101,7 +98,7 @@ export default function ProjectPage() {
     setSavingStoryboard(true);
     try {
       await api.updateStoryboard(projectId, storyboard);
-      setProject(prev => prev ? { ...prev, storyboard } : prev);
+      setProject((prev: any) => prev ? { ...prev, storyboard } : prev);
       toast("Storyboard sauvegardé", "success");
     } catch (err: any) {
       toast(err.message, "error");
@@ -115,7 +112,7 @@ export default function ProjectPage() {
     try {
       const { renderJob: job } = await api.startRender(projectId);
       setRenderJob(job);
-      setProject(prev => prev ? { ...prev, status: "RENDERING" } : prev);
+      setProject((prev: any) => prev ? { ...prev, status: "RENDERING" } : prev);
       setTab("render");
       toast("Rendu lancé", "info");
     } catch (err: any) {
@@ -129,7 +126,7 @@ export default function ProjectPage() {
     setSavingScript(true);
     try {
       await api.updateProject(projectId, { script: scriptDraft });
-      setProject(prev => prev ? { ...prev, script: scriptDraft } : prev);
+      setProject((prev: any) => prev ? { ...prev, script: scriptDraft } : prev);
       setEditingScript(false);
       toast("Script mis à jour", "success");
     } catch (err: any) {

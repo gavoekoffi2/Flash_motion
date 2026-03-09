@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef, useCallback } from "react";
+import { motion, useScroll, useTransform, useMotionValue } from "framer-motion";
 import Link from "next/link";
 
 function FloatingShape({
@@ -29,7 +29,8 @@ function FloatingShape({
 
 export default function HeroSection() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [mouse, setMouse] = useState({ x: 0, y: 0 });
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -39,14 +40,22 @@ export default function HeroSection() {
   const bgY = useTransform(scrollYProgress, [0, 1], [0, 200]);
   const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
+  // Parallax transforms derived from mouse position (no re-renders)
+  const orb1X = useTransform(mouseX, v => v * -30);
+  const orb1Y = useTransform(mouseY, v => v * -30);
+  const orb2X = useTransform(mouseX, v => v * 20);
+  const orb2Y = useTransform(mouseY, v => v * 20);
+  const orb3X = useTransform(mouseX, v => v * -15);
+  const orb3Y = useTransform(mouseY, v => v * -15);
+  const mockupRotateY = useTransform(mouseX, v => v * 5);
+  const mockupRotateX = useTransform(mouseY, v => v * -5);
+
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setMouse({
-      x: ((e.clientX - rect.left) / rect.width - 0.5) * 2,
-      y: ((e.clientY - rect.top) / rect.height - 0.5) * 2,
-    });
-  }, []);
+    mouseX.set(((e.clientX - rect.left) / rect.width - 0.5) * 2);
+    mouseY.set(((e.clientY - rect.top) / rect.height - 0.5) * 2);
+  }, [mouseX, mouseY]);
 
   return (
     <section
@@ -62,24 +71,15 @@ export default function HeroSection() {
         {/* Gradient orbs */}
         <motion.div
           className="absolute top-1/4 -left-32 w-[600px] h-[600px] rounded-full bg-brand-500/10 blur-[120px]"
-          style={{
-            x: mouse.x * -30,
-            y: mouse.y * -30,
-          }}
+          style={{ x: orb1X, y: orb1Y }}
         />
         <motion.div
           className="absolute bottom-1/4 -right-32 w-[500px] h-[500px] rounded-full bg-purple-500/8 blur-[100px]"
-          style={{
-            x: mouse.x * 20,
-            y: mouse.y * 20,
-          }}
+          style={{ x: orb2X, y: orb2Y }}
         />
         <motion.div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full bg-brand-500/5 blur-[150px]"
-          style={{
-            x: mouse.x * -15,
-            y: mouse.y * -15,
-          }}
+          style={{ x: orb3X, y: orb3Y }}
         />
 
         {/* Grid pattern */}
@@ -203,8 +203,9 @@ export default function HeroSection() {
           <motion.div
             className="relative rounded-2xl overflow-hidden border border-white/10 bg-dark-900/80 backdrop-blur-xl shadow-2xl shadow-black/50"
             style={{
-              transform: `perspective(1200px) rotateY(${mouse.x * 5}deg) rotateX(${-mouse.y * 5}deg)`,
-              transition: "transform 0.15s ease-out",
+              perspective: 1200,
+              rotateY: mockupRotateY,
+              rotateX: mockupRotateX,
             }}
           >
             {/* Browser chrome */}

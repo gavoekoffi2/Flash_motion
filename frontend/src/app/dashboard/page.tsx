@@ -4,24 +4,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 
 export default function DashboardPage() {
-  const { user, loading, checkAuth, logout } = useAuth();
+  const { user, loading } = useRequireAuth();
+  const { logout } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [projects, setProjects] = useState<any[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
-  useEffect(() => {
-    if (!loading && !user) router.push("/login");
-  }, [user, loading, router]);
 
   useEffect(() => {
     if (user) {

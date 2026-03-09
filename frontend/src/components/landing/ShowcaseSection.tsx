@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 
 const showcaseItems = [
   {
@@ -39,18 +39,19 @@ const showcaseItems = [
 export default function ShowcaseSection() {
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [mouse, setMouse] = useState({ x: 0, y: 0 });
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const showcaseRotateY = useTransform(mouseX, v => v * 4);
+  const showcaseRotateX = useTransform(mouseY, v => v * -4);
 
   const active = showcaseItems[activeIndex];
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setMouse({
-      x: ((e.clientX - rect.left) / rect.width - 0.5) * 2,
-      y: ((e.clientY - rect.top) / rect.height - 0.5) * 2,
-    });
-  }, []);
+    mouseX.set(((e.clientX - rect.left) / rect.width - 0.5) * 2);
+    mouseY.set(((e.clientY - rect.top) / rect.height - 0.5) * 2);
+  }, [mouseX, mouseY]);
 
   return (
     <section id="showcase" className="relative py-32 overflow-hidden">
@@ -112,18 +113,19 @@ export default function ShowcaseSection() {
         <motion.div
           ref={containerRef}
           onMouseMove={handleMouseMove}
-          onMouseLeave={() => setMouse({ x: 0, y: 0 })}
+          onMouseLeave={() => { mouseX.set(0); mouseY.set(0); }}
           className="max-w-4xl mx-auto"
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <div
+          <motion.div
             className="relative rounded-2xl border border-white/10 bg-dark-900/50 backdrop-blur-xl overflow-hidden shadow-2xl"
             style={{
-              transform: `perspective(1000px) rotateY(${mouse.x * 4}deg) rotateX(${-mouse.y * 4}deg)`,
-              transition: "transform 0.15s ease-out",
+              perspective: 1000,
+              rotateY: showcaseRotateY,
+              rotateX: showcaseRotateX,
             }}
           >
             {/* Top bar */}
@@ -209,7 +211,7 @@ export default function ShowcaseSection() {
               className="absolute -top-px left-1/4 right-1/4 h-px transition-colors duration-700"
               style={{ background: `linear-gradient(90deg, transparent, ${active.color}40, transparent)` }}
             />
-          </div>
+          </motion.div>
         </motion.div>
       </div>
     </section>

@@ -187,7 +187,7 @@ export default function StoryboardEditor({ storyboard, assets = [], onSave, savi
               <span className="text-xs text-gray-400 bg-dark-800 px-2 py-0.5 rounded">{scene.type}</span>
               <span className="text-xs text-gray-500">{scene.duration_s}s</span>
               <span className="text-xs text-gray-500">{scene.animation}</span>
-              <span className="text-sm text-gray-300 truncate max-w-[300px]">{scene.text}</span>
+              <span className="text-sm text-gray-300 truncate max-w-[150px] sm:max-w-[300px]">{scene.text}</span>
             </div>
             <div className="flex items-center gap-1">
               {scene.assets.length > 0 && (
@@ -202,7 +202,7 @@ export default function StoryboardEditor({ storyboard, assets = [], onSave, savi
           {/* Expanded details */}
           {expandedScene === idx && (
             <div className="px-4 pb-4 space-y-3 border-t border-dark-700 pt-3">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Type</label>
                   <select
