@@ -40,7 +40,7 @@ export default function ProjectPage() {
     } catch (err: any) {
       toast(err.message, "error");
     }
-  }, [projectId, toast]);
+  }, [projectId]);
 
   const loadAssets = useCallback(async () => {
     try {
@@ -77,7 +77,7 @@ export default function ProjectPage() {
       }
     }, 3000);
     return () => clearInterval(interval);
-  }, [renderJob, projectId, loadProject, toast]);
+  }, [renderJob, projectId, loadProject]);
 
   if (loading || !user || !project) {
     return <div className="flex items-center justify-center min-h-screen text-gray-400">Chargement...</div>;
@@ -87,7 +87,7 @@ export default function ProjectPage() {
     setGenerating(true);
     try {
       const { storyboard } = await api.generateStoryboard(projectId);
-      setProject({ ...project, storyboard, status: "STORYBOARD_READY" });
+      setProject(prev => prev ? { ...prev, storyboard, status: "STORYBOARD_READY" } : prev);
       setTab("storyboard");
       toast("Storyboard généré avec succès", "success");
     } catch (err: any) {
@@ -101,7 +101,7 @@ export default function ProjectPage() {
     setSavingStoryboard(true);
     try {
       await api.updateStoryboard(projectId, storyboard);
-      setProject({ ...project, storyboard });
+      setProject(prev => prev ? { ...prev, storyboard } : prev);
       toast("Storyboard sauvegardé", "success");
     } catch (err: any) {
       toast(err.message, "error");
@@ -115,7 +115,7 @@ export default function ProjectPage() {
     try {
       const { renderJob: job } = await api.startRender(projectId);
       setRenderJob(job);
-      setProject({ ...project, status: "RENDERING" });
+      setProject(prev => prev ? { ...prev, status: "RENDERING" } : prev);
       setTab("render");
       toast("Rendu lancé", "info");
     } catch (err: any) {
@@ -129,7 +129,7 @@ export default function ProjectPage() {
     setSavingScript(true);
     try {
       await api.updateProject(projectId, { script: scriptDraft });
-      setProject({ ...project, script: scriptDraft });
+      setProject(prev => prev ? { ...prev, script: scriptDraft } : prev);
       setEditingScript(false);
       toast("Script mis à jour", "success");
     } catch (err: any) {

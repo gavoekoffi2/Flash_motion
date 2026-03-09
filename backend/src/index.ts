@@ -45,6 +45,22 @@ app.use("/api/auth/register", rateLimit({
   legacyHeaders: false,
 }));
 
+// ── Rate limiter — strict for password reset ──
+app.use("/api/auth/forgot-password", rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Too many password reset attempts, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
+app.use("/api/auth/reset-password", rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many reset attempts" },
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
+
 // ── Routes ──
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
@@ -80,7 +96,8 @@ async function start() {
       process.exit(1);
     }
     if (env.s3SecretKey === "minioadmin") {
-      console.warn("[SECURITY] WARNING: Using default MinIO credentials in production!");
+      console.error("[SECURITY] S3_SECRET_KEY is using default credentials in production. Exiting.");
+      process.exit(1);
     }
   }
 
@@ -99,10 +116,24 @@ async function start() {
     console.warn("[S3] Bucket setup warning:", err);
   }
 
-  app.listen(env.port, () => {
+  const server = app.listen(env.port, () => {
     console.log(`[Flash Motion API] Running on http://localhost:${env.port}`);
     console.log(`[Config] LLM mode: ${env.llmMode}, Env: ${env.nodeEnv}`);
   });
+
+  // ── Graceful shutdown ──
+  const shutdown = async (signal: string) => {
+    console.log(`[Server] ${signal} received, shutting down gracefully...`);
+    server.close(() => {
+      console.log("[Server] HTTP server closed");
+    });
+    await prisma.$disconnect();
+    console.log("[DB] Disconnected");
+    process.exit(0);
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
 start();

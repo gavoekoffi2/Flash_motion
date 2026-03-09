@@ -72,7 +72,7 @@ async function callOpenRouter(messages: { role: string; content: string }[]): Pr
     throw new Error(`OpenRouter error ${res.status}: ${body}`);
   }
 
-  const data = await res.json();
+  const data = await res.json() as { choices: { message: { content: string } }[] };
   return data.choices[0].message.content;
 }
 
@@ -94,7 +94,7 @@ async function callOllama(messages: { role: string; content: string }[]): Promis
     throw new Error(`Ollama error ${res.status}: ${body}`);
   }
 
-  const data = await res.json();
+  const data = await res.json() as { message: { content: string } };
   return data.message.content;
 }
 

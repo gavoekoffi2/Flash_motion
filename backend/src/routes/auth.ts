@@ -23,8 +23,8 @@ const loginSchema = z.object({
 function signToken(user: { id: string; email: string; role: string }): string {
   return jwt.sign(
     { userId: user.id, email: user.email, role: user.role },
-    env.jwtSecret,
-    { expiresIn: env.jwtExpiresIn },
+    env.jwtSecret as jwt.Secret,
+    { expiresIn: env.jwtExpiresIn } as jwt.SignOptions,
   );
 }
 

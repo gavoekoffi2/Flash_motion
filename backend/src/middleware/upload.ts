@@ -1,5 +1,4 @@
 import multer from "multer";
-import path from "path";
 import { env } from "../config/env";
 
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];

@@ -30,6 +30,7 @@ const updateProjectSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   script: z.string().min(10).max(10000).optional(),
   aspectRatio: z.enum(["9:16", "16:9", "1:1"]).optional(),
+  template: z.enum(VALID_TEMPLATES).optional(),
   brandConfig: z.object({
     primary_color: z.string().optional(),
     logo_id: z.string().optional(),
@@ -148,6 +149,7 @@ router.put("/:id", async (req: Request, res: Response) => {
         title: data.title ?? project.title,
         script: data.script ?? project.script,
         aspectRatio: data.aspectRatio ?? project.aspectRatio,
+        template: data.template ?? project.template,
         brandConfig: data.brandConfig !== undefined ? data.brandConfig : project.brandConfig,
       },
     });
@@ -217,13 +219,13 @@ router.delete("/:id", async (req: Request, res: Response) => {
     }
     await Promise.allSettled(s3Deletions);
 
-    // Update storage quota
+    // Update storage quota (floor at 0 to prevent negative values)
     const totalSizeMb = project.assets.reduce((sum, a) => sum + a.sizeMb, 0);
     if (totalSizeMb > 0) {
-      await prisma.quota.updateMany({
-        where: { userId: req.user!.userId },
-        data: { storageUsedMb: { decrement: totalSizeMb } },
-      });
+      await prisma.$executeRaw`
+        UPDATE "Quota" SET "storageUsedMb" = GREATEST(0, "storageUsedMb" - ${totalSizeMb})
+        WHERE "userId" = ${req.user!.userId}
+      `;
     }
 
     await prisma.project.delete({ where: { id: req.params.id } });
@@ -278,7 +280,7 @@ router.post("/:id/generate-storyboard", async (req: Request, res: Response) => {
     return res.json({ storyboard });
   } catch (err) {
     console.error("[Projects] Generate storyboard error:", err);
-    return res.status(500).json({ error: (err as Error).message });
+    return res.status(500).json({ error: "Storyboard generation failed" });
   }
 });
 
@@ -345,7 +347,7 @@ router.post("/:id/generate-tts", async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error("[Projects] TTS generation error:", err);
-    return res.status(500).json({ error: (err as Error).message });
+    return res.status(500).json({ error: "TTS generation failed" });
   }
 });
 

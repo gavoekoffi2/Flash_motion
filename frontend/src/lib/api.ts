@@ -13,8 +13,6 @@ function getApiBase(): string {
   return "http://localhost:4000/api";
 }
 
-const API_BASE = getApiBase();
-
 class ApiClient {
   private token: string | null = null;
 
@@ -49,7 +47,7 @@ class ApiClient {
 
     let res: Response;
     try {
-      res = await fetch(`${API_BASE}${path}`, {
+      res = await fetch(`${getApiBase()}${path}`, {
         ...options,
         headers,
       });
@@ -69,6 +67,10 @@ class ApiClient {
 
       switch (res.status) {
         case 401:
+          this.setToken(null);
+          if (typeof window !== "undefined") {
+            window.location.href = "/login";
+          }
           throw new Error("Session expirée. Veuillez vous reconnecter.");
         case 403:
           throw new Error("Accès refusé.");

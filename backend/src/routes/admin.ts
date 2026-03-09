@@ -1,6 +1,9 @@
 import { Router, Request, Response } from "express";
+import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { authMiddleware, adminOnly } from "../middleware/auth";
+
+const VALID_RENDER_STATUSES = ["QUEUED", "RENDERING", "UPLOADING", "DONE", "FAILED"] as const;
 
 const router = Router();
 router.use(authMiddleware);
@@ -56,9 +59,15 @@ router.get("/users", async (req: Request, res: Response) => {
 });
 
 // PUT /api/admin/users/:id/quota — update user quota
+const quotaSchema = z.object({
+  llmCallsLimit: z.number().int().min(0).optional(),
+  rendersLimit: z.number().int().min(0).optional(),
+  storageLimitMb: z.number().min(0).optional(),
+});
+
 router.put("/users/:id/quota", async (req: Request, res: Response) => {
   try {
-    const { llmCallsLimit, rendersLimit, storageLimitMb } = req.body;
+    const { llmCallsLimit, rendersLimit, storageLimitMb } = quotaSchema.parse(req.body);
 
     const user = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -80,18 +89,20 @@ router.put("/users/:id/quota", async (req: Request, res: Response) => {
 
     return res.json({ quota });
   } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: "Validation error", details: err.errors });
+    }
     console.error("[Admin] Update quota error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // PUT /api/admin/users/:id/plan — update user plan
+const planSchema = z.object({ plan: z.enum(["FREE", "PRO", "ENTERPRISE"]) });
+
 router.put("/users/:id/plan", async (req: Request, res: Response) => {
   try {
-    const { plan } = req.body;
-    if (!["FREE", "PRO", "ENTERPRISE"].includes(plan)) {
-      return res.status(400).json({ error: "Invalid plan. Must be: FREE, PRO, or ENTERPRISE" });
-    }
+    const { plan } = planSchema.parse(req.body);
 
     const user = await prisma.user.update({
       where: { id: req.params.id },
@@ -109,7 +120,8 @@ router.put("/users/:id/plan", async (req: Request, res: Response) => {
 // GET /api/admin/render-jobs — list all render jobs
 router.get("/render-jobs", async (req: Request, res: Response) => {
   try {
-    const status = req.query.status as string | undefined;
+    const rawStatus = req.query.status as string | undefined;
+    const status = rawStatus && VALID_RENDER_STATUSES.includes(rawStatus as any) ? rawStatus : undefined;
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
 

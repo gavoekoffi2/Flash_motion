@@ -13,7 +13,13 @@ export const env = {
   port: parseInt(process.env.PORT || "4000", 10),
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
 
-  databaseUrl: process.env.DATABASE_URL!,
+  databaseUrl: (() => {
+    if (!process.env.DATABASE_URL) {
+      console.error("[CONFIG] DATABASE_URL is required. Exiting.");
+      process.exit(1);
+    }
+    return process.env.DATABASE_URL;
+  })(),
 
   redisUrl: process.env.REDIS_URL || "redis://localhost:6379",
 

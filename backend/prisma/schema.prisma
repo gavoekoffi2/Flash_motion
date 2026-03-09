@@ -21,6 +21,8 @@ model User {
   updatedAt      DateTime  @updatedAt
   projects       Project[]
   quota          Quota?
+
+  @@index([resetToken])
 }
 
 model Quota {
@@ -52,6 +54,8 @@ model Project {
   updatedAt   DateTime      @updatedAt
   assets      Asset[]
   renderJobs  RenderJob[]
+
+  @@index([userId])
 }
 
 model Asset {
@@ -65,6 +69,8 @@ model Asset {
   s3Key      String
   metadata   Json?
   createdAt  DateTime  @default(now())
+
+  @@index([projectId])
 }
 
 model RenderJob {
@@ -78,6 +84,8 @@ model RenderJob {
   startedAt  DateTime?
   finishedAt DateTime?
   createdAt  DateTime    @default(now())
+
+  @@index([projectId])
 }
 
 enum Role {

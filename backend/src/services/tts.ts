@@ -68,15 +68,16 @@ async function generateElevenLabs(text: string, voice: string, projectId: string
 
 async function generatePiper(text: string, _voice: string, projectId: string): Promise<TTSResult> {
   // Piper local TTS — requires piper binary on the system
-  const { execSync } = await import("child_process");
+  const { execFileSync } = await import("child_process");
   const hash = crypto.randomBytes(6).toString("hex");
   const tempPath = `/tmp/flash-motion/tts-${hash}.wav`;
 
   try {
-    execSync(
-      `echo "${text.replace(/"/g, '\\"')}" | piper --model ${env.piperModel} --output_file ${tempPath}`,
-      { timeout: 30000 },
-    );
+    // Use execFileSync with stdin input to prevent shell injection
+    execFileSync("piper", ["--model", env.piperModel, "--output_file", tempPath], {
+      input: text,
+      timeout: 30000,
+    });
 
     const fs = await import("fs");
     const buffer = fs.readFileSync(tempPath);

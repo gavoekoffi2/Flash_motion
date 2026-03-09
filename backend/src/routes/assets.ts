@@ -99,7 +99,7 @@ router.post(
       return res.status(201).json({ assets: uploaded });
     } catch (err) {
       console.error("[Assets] Upload error:", err);
-      return res.status(500).json({ error: (err as Error).message });
+      return res.status(500).json({ error: "Asset upload failed" });
     }
   },
 );
@@ -151,12 +151,12 @@ router.delete("/:projectId/assets/:assetId", async (req: Request, res: Response)
     await deleteFromS3(asset.s3Key);
     await prisma.asset.delete({ where: { id: asset.id } });
 
-    // Update storage quota
+    // Update storage quota (floor at 0)
     if (asset.sizeMb > 0) {
-      await prisma.quota.updateMany({
-        where: { userId: req.user!.userId },
-        data: { storageUsedMb: { decrement: asset.sizeMb } },
-      });
+      await prisma.$executeRaw`
+        UPDATE "Quota" SET "storageUsedMb" = GREATEST(0, "storageUsedMb" - ${asset.sizeMb})
+        WHERE "userId" = ${req.user!.userId}
+      `;
     }
 
     return res.json({ message: "Asset deleted" });

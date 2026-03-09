@@ -33,7 +33,7 @@ export default function DashboardPage() {
   }, [user]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-400">Chargement...</div>;
-  if (!user) return null;
+  if (!user) return <div className="flex items-center justify-center min-h-screen text-gray-400">Redirection...</div>;
 
   async function handleDelete(e: React.MouseEvent, id: string) {
     e.preventDefault();
@@ -156,7 +156,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Action buttons */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                <div className="flex gap-1 mt-3 md:absolute md:top-2 md:right-2 md:mt-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={(e) => handleDuplicate(e, p.id)}
                     className="bg-dark-700 hover:bg-dark-900 text-gray-300 text-xs px-2 py-1 rounded"
