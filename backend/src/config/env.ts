@@ -23,7 +23,14 @@ export const env = {
 
   redisUrl: process.env.REDIS_URL || "redis://localhost:6379",
 
-  jwtSecret: process.env.JWT_SECRET || "dev-secret-change-me",
+  jwtSecret: (() => {
+    const secret = process.env.JWT_SECRET || "dev-secret-change-me";
+    if (secret === "dev-secret-change-me" && process.env.NODE_ENV !== "development") {
+      console.error("[SECURITY] JWT_SECRET must be set in non-development environments. Exiting.");
+      process.exit(1);
+    }
+    return secret;
+  })(),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
 
   s3Endpoint: process.env.S3_ENDPOINT || "http://localhost:9000",

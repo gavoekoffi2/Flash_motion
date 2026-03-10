@@ -56,7 +56,7 @@ const plans = [
       "SLA guarantee",
     ],
     cta: "Contact Sales",
-    href: "#",
+    href: "mailto:sales@flashmotion.dev?subject=Enterprise%20Plan%20Inquiry",
     highlighted: false,
   },
 ];

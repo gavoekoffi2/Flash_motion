@@ -5,7 +5,7 @@ import { z } from "zod";
 import { prisma } from "../config/prisma";
 import { env } from "../config/env";
 import { authMiddleware } from "../middleware/auth";
-import { sendWelcomeEmail, sendPasswordResetEmail, generateResetToken } from "../services/email";
+import { sendWelcomeEmail, sendPasswordResetEmail, generateResetToken, hashResetToken } from "../services/email";
 
 const router = Router();
 
@@ -52,8 +52,10 @@ router.post("/register", async (req: Request, res: Response) => {
 
     const token = signToken(user);
 
-    // Send welcome email (non-blocking)
-    sendWelcomeEmail(user.email, user.name || undefined).catch(() => {});
+    // Send welcome email (non-blocking, log errors)
+    sendWelcomeEmail(user.email, user.name || undefined).catch((err) =>
+      console.error("[Auth] Welcome email failed:", err)
+    );
 
     return res.status(201).json({
       token,
@@ -139,7 +141,7 @@ router.put("/profile", authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/auth/password — change password
+// PUT /api/auth/password — change password (issues new token)
 router.put("/password", authMiddleware, async (req: Request, res: Response) => {
   try {
     const schema = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(8) });
@@ -154,7 +156,9 @@ router.put("/password", authMiddleware, async (req: Request, res: Response) => {
     const hashed = await bcrypt.hash(data.newPassword, 12);
     await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
 
-    return res.json({ message: "Password updated" });
+    // Issue a fresh token so the user doesn't get logged out
+    const newToken = signToken(user);
+    return res.json({ message: "Password updated", token: newToken });
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ error: "Validation error", details: err.errors });
     console.error("[Auth] Password change error:", err);
@@ -172,13 +176,15 @@ router.post("/forgot-password", async (req: Request, res: Response) => {
     if (!user) return res.json({ message: "If that email exists, a reset link has been sent." });
 
     const resetToken = generateResetToken();
+    const hashedToken = hashResetToken(resetToken);
     const resetTokenExp = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { resetToken, resetTokenExp },
+      data: { resetToken: hashedToken, resetTokenExp },
     });
 
+    // Send the raw token to the user (we store the hash)
     await sendPasswordResetEmail(email, resetToken);
 
     return res.json({ message: "If that email exists, a reset link has been sent." });
@@ -194,8 +200,10 @@ router.post("/reset-password", async (req: Request, res: Response) => {
     const schema = z.object({ token: z.string().min(1), newPassword: z.string().min(8) });
     const data = schema.parse(req.body);
 
+    // Hash the incoming token and look up by hash
+    const hashedToken = hashResetToken(data.token);
     const user = await prisma.user.findFirst({
-      where: { resetToken: data.token, resetTokenExp: { gte: new Date() } },
+      where: { resetToken: hashedToken, resetTokenExp: { gte: new Date() } },
     });
     if (!user) return res.status(400).json({ error: "Invalid or expired reset token" });
 

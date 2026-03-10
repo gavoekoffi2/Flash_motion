@@ -9,7 +9,7 @@ import { env } from "../config/env";
 import crypto from "crypto";
 
 export function generateS3Key(projectId: string, filename: string): string {
-  const ext = filename.split(".").pop() || "bin";
+  const ext = (filename.split(".").pop() || "bin").replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
   const hash = crypto.randomBytes(8).toString("hex");
   return `projects/${projectId}/assets/${hash}.${ext}`;
 }

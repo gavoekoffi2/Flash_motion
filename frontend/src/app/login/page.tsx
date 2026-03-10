@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,8 +10,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const router = useRouter();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) router.push("/dashboard");
+  }, [user, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,8 +50,9 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Email</label>
+            <label htmlFor="login-email" className="block text-sm text-gray-400 mb-1">Email</label>
             <input
+              id="login-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -57,8 +63,9 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Mot de passe</label>
+            <label htmlFor="login-password" className="block text-sm text-gray-400 mb-1">Mot de passe</label>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

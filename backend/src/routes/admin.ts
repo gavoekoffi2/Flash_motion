@@ -104,6 +104,9 @@ router.put("/users/:id/plan", async (req: Request, res: Response) => {
   try {
     const { plan } = planSchema.parse(req.body);
 
+    const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: "User not found" });
+
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data: { plan },
@@ -112,6 +115,7 @@ router.put("/users/:id/plan", async (req: Request, res: Response) => {
 
     return res.json({ user });
   } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ error: "Validation error", details: err.errors });
     console.error("[Admin] Update plan error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }

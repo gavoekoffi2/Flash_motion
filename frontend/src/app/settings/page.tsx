@@ -75,7 +75,7 @@ export default function SettingsPage() {
     <div className="min-h-screen">
       <header className="border-b border-dark-700 bg-dark-900/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-4">
-          <button onClick={() => router.push("/dashboard")} className="text-gray-400 hover:text-white">&larr; Retour</button>
+          <button onClick={() => router.push("/dashboard")} className="text-gray-400 hover:text-white min-h-[44px] min-w-[44px] px-2">&larr; Retour</button>
           <h1 className="text-lg font-semibold">Paramètres</h1>
         </div>
       </header>
@@ -86,8 +86,9 @@ export default function SettingsPage() {
           <h2 className="text-lg font-medium mb-4">Profil</h2>
           <form onSubmit={handleSaveProfile} className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Nom</label>
+              <label htmlFor="settings-name" className="block text-sm text-gray-400 mb-1">Nom</label>
               <input
+                id="settings-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -96,8 +97,9 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Email</label>
+              <label htmlFor="settings-email" className="block text-sm text-gray-400 mb-1">Email</label>
               <input
+                id="settings-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -122,8 +124,9 @@ export default function SettingsPage() {
           <h2 className="text-lg font-medium mb-4">Changer le mot de passe</h2>
           <form onSubmit={handleChangePassword} className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Mot de passe actuel</label>
+              <label htmlFor="settings-current-password" className="block text-sm text-gray-400 mb-1">Mot de passe actuel</label>
               <input
+                id="settings-current-password"
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
@@ -132,8 +135,9 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Nouveau mot de passe</label>
+              <label htmlFor="settings-new-password" className="block text-sm text-gray-400 mb-1">Nouveau mot de passe</label>
               <input
+                id="settings-new-password"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -143,8 +147,9 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Confirmer le nouveau mot de passe</label>
+              <label htmlFor="settings-confirm-password" className="block text-sm text-gray-400 mb-1">Confirmer le nouveau mot de passe</label>
               <input
+                id="settings-confirm-password"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

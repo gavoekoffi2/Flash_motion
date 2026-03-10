@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,8 +11,13 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const { register, user } = useAuth();
   const router = useRouter();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) router.push("/dashboard");
+  }, [user, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,8 +51,9 @@ export default function RegisterPage() {
           )}
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Nom (optionnel)</label>
+            <label htmlFor="register-name" className="block text-sm text-gray-400 mb-1">Nom (optionnel)</label>
             <input
+              id="register-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -57,8 +63,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Email</label>
+            <label htmlFor="register-email" className="block text-sm text-gray-400 mb-1">Email</label>
             <input
+              id="register-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -69,8 +76,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Mot de passe (min. 8 caractères)</label>
+            <label htmlFor="register-password" className="block text-sm text-gray-400 mb-1">Mot de passe (min. 8 caractères)</label>
             <input
+              id="register-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

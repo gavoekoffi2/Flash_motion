@@ -73,13 +73,16 @@ async function generatePiper(text: string, _voice: string, projectId: string): P
   const tempPath = `/tmp/flash-motion/tts-${hash}.wav`;
 
   try {
+    // Ensure temp directory exists
+    const fs = await import("fs");
+    fs.mkdirSync("/tmp/flash-motion", { recursive: true });
+
     // Use execFileSync with stdin input to prevent shell injection
     execFileSync("piper", ["--model", env.piperModel, "--output_file", tempPath], {
       input: text,
       timeout: 30000,
     });
 
-    const fs = await import("fs");
     const buffer = fs.readFileSync(tempPath);
     const s3Key = `projects/${projectId}/tts/${hash}.wav`;
 

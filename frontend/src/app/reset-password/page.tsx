@@ -65,8 +65,9 @@ function ResetPasswordForm() {
                 </div>
               )}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Nouveau mot de passe</label>
+                <label htmlFor="reset-new-password" className="block text-sm text-gray-400 mb-1">Nouveau mot de passe</label>
                 <input
+                  id="reset-new-password"
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -76,8 +77,9 @@ function ResetPasswordForm() {
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Confirmer le mot de passe</label>
+                <label htmlFor="reset-confirm-password" className="block text-sm text-gray-400 mb-1">Confirmer le mot de passe</label>
                 <input
+                  id="reset-confirm-password"
                   type="password"
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}

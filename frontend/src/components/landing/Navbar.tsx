@@ -21,6 +21,16 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Close mobile menu on Escape key
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [mobileOpen]);
+
   return (
     <motion.nav
       initial={{ y: -100 }}
@@ -86,6 +96,7 @@ export default function Navbar() {
             onClick={() => setMobileOpen(!mobileOpen)}
             className="md:hidden relative w-10 h-10 flex items-center justify-center"
             aria-label="Toggle menu"
+            aria-expanded={mobileOpen}
           >
             <div className="flex flex-col gap-1.5">
               <span

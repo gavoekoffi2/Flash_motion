@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Scene {
   id: number;
@@ -37,6 +37,8 @@ interface Props {
 
 export default function StoryboardEditor({ storyboard, assets = [], onSave, saving }: Props) {
   const [data, setData] = useState<Storyboard>(storyboard);
+  // Re-sync when parent passes a new storyboard (e.g. after AI regeneration)
+  useEffect(() => { setData(storyboard); }, [storyboard]);
   const [expandedScene, setExpandedScene] = useState<number | null>(null);
   const [showAssetPicker, setShowAssetPicker] = useState<number | null>(null);
 

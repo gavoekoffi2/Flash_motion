@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../config/prisma";
 import { authMiddleware } from "../middleware/auth";
-import { uploadMiddleware, getAssetType } from "../middleware/upload";
+import { uploadMiddleware, getAssetType, verifyMagicBytes } from "../middleware/upload";
 import { uploadToS3, generateS3Key, getSignedDownloadUrl, deleteFromS3 } from "../services/storage";
 import { env } from "../config/env";
 import sharp from "sharp";
@@ -48,6 +48,13 @@ router.post(
       let totalUploadedMb = 0;
 
       for (const file of files) {
+        // Verify magic bytes match claimed MIME type (prevent spoofed Content-Type)
+        if (!verifyMagicBytes(file.buffer, file.mimetype)) {
+          return res.status(400).json({
+            error: `File "${file.originalname}" content does not match its declared type (${file.mimetype})`,
+          });
+        }
+
         let buffer = file.buffer;
         const assetType = getAssetType(file.mimetype);
 

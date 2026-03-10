@@ -21,7 +21,7 @@ const createProjectSchema = z.object({
   aspectRatio: z.enum(["9:16", "16:9", "1:1"]).default("9:16"),
   template: z.enum(VALID_TEMPLATES).default("HeroPromo"),
   brandConfig: z.object({
-    primary_color: z.string().optional(),
+    primary_color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color (#RRGGBB)").optional(),
     logo_id: z.string().optional(),
   }).optional(),
 });
@@ -32,7 +32,7 @@ const updateProjectSchema = z.object({
   aspectRatio: z.enum(["9:16", "16:9", "1:1"]).optional(),
   template: z.enum(VALID_TEMPLATES).optional(),
   brandConfig: z.object({
-    primary_color: z.string().optional(),
+    primary_color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color (#RRGGBB)").optional(),
     logo_id: z.string().optional(),
   }).optional(),
 });
@@ -174,7 +174,7 @@ router.post("/:id/duplicate", async (req: Request, res: Response) => {
     const project = await prisma.project.create({
       data: {
         userId: req.user!.userId,
-        title: `${original.title} (copie)`,
+        title: `${original.title.slice(0, 192)} (copie)`,
         script: original.script,
         aspectRatio: original.aspectRatio,
         template: original.template,

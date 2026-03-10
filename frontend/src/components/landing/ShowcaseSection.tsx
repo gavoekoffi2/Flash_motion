@@ -143,7 +143,7 @@ export default function ShowcaseSection() {
             {/* Mockup content */}
             <div className="p-6 sm:p-8">
               {/* Scene strip */}
-              <div className="grid grid-cols-4 gap-3 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                 {active.scenes.map((scene, i) => (
                   <motion.div
                     key={`${activeIndex}-${i}`}

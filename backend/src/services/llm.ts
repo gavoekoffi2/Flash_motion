@@ -148,6 +148,7 @@ export async function generateStoryboard(
     }
     return storyboard;
   } catch (err) {
-    throw new Error(`Failed to parse storyboard JSON: ${(err as Error).message}\nRaw LLM output: ${raw.slice(0, 500)}`);
+    console.error("[LLM] Failed to parse storyboard. Raw output:", raw.slice(0, 500));
+    throw new Error(`Failed to parse storyboard from LLM response: ${(err as Error).message}`);
   }
 }

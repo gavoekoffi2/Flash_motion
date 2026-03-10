@@ -140,7 +140,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <p className="text-sm text-gray-400 line-clamp-2 mb-3">
-                  {p.script?.slice(0, 120)}...
+                  {p.script ? (p.script.length > 120 ? p.script.slice(0, 120) + "..." : p.script) : ""}
                 </p>
                 <div className="flex items-center gap-4 text-xs text-gray-500">
                   <span>{p.aspectRatio}</span>
@@ -150,10 +150,10 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Action buttons */}
-                <div className="flex gap-1 mt-3 md:absolute md:top-2 md:right-2 md:mt-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1 mt-3 md:absolute md:top-2 md:right-2 md:mt-0 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
                   <button
                     onClick={(e) => handleDuplicate(e, p.id)}
-                    className="bg-dark-700 hover:bg-dark-900 text-gray-300 text-xs px-2 py-1 rounded"
+                    className="bg-dark-700 hover:bg-dark-900 text-gray-300 text-xs px-3 py-2 rounded min-h-[44px] focus:opacity-100"
                     title="Dupliquer"
                   >
                     Dupliquer
@@ -161,7 +161,7 @@ export default function DashboardPage() {
                   <button
                     onClick={(e) => handleDelete(e, p.id)}
                     disabled={deletingId === p.id}
-                    className="bg-red-900/60 hover:bg-red-900 text-red-300 text-xs px-2 py-1 rounded"
+                    className="bg-red-900/60 hover:bg-red-900 text-red-300 text-xs px-3 py-2 rounded min-h-[44px] focus:opacity-100"
                     title="Supprimer"
                   >
                     {deletingId === p.id ? "..." : "Suppr."}

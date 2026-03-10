@@ -86,6 +86,7 @@ model RenderJob {
   createdAt  DateTime    @default(now())
 
   @@index([projectId])
+  @@index([status])
 }
 
 enum Role {
