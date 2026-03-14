@@ -3,6 +3,7 @@ import { prisma } from "../config/prisma";
 import { authMiddleware } from "../middleware/auth";
 import { uploadMiddleware, getAssetType, verifyMagicBytes } from "../middleware/upload";
 import { uploadToS3, generateS3Key, getSignedDownloadUrl, deleteFromS3 } from "../services/storage";
+import { s3Available } from "../config/s3";
 import { env } from "../config/env";
 import sharp from "sharp";
 
@@ -15,6 +16,10 @@ router.post(
   uploadMiddleware.array("files", 10),
   async (req: Request, res: Response) => {
     try {
+      if (!s3Available) {
+        return res.status(503).json({ error: "Storage service unavailable. Please ensure S3/MinIO is running." });
+      }
+
       const project = await prisma.project.findFirst({
         where: { id: req.params.projectId, userId: req.user!.userId },
         include: { _count: { select: { assets: true } } },

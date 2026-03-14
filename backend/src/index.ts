@@ -112,7 +112,12 @@ async function start() {
 
   try {
     await ensureBucket();
-    console.log("[S3] Bucket ready");
+    const { s3Available } = await import("./config/s3");
+    if (s3Available) {
+      console.log("[S3] Bucket ready");
+    } else {
+      console.warn("[S3] Running without storage — asset uploads will fail. Start MinIO/S3 to enable.");
+    }
   } catch (err) {
     console.warn("[S3] Bucket setup warning:", err);
   }

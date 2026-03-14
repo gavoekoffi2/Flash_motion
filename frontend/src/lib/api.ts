@@ -196,6 +196,14 @@ class ApiClient {
     });
   }
 
+  // ── TTS ──
+  async generateTTS(projectId: string) {
+    return this.request<{ message: string; results: Record<string, { s3Key: string; duration_s: number }> }>(
+      `/projects/${encodeURIComponent(projectId)}/generate-tts`,
+      { method: "POST" },
+    );
+  }
+
   // ── Render ──
   async startRender(projectId: string) {
     return this.request<{ renderJob: RenderJob }>(`/projects/${encodeURIComponent(projectId)}/render`, {
