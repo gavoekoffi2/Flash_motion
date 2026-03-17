@@ -34,8 +34,8 @@ router.get("/stats", async (_req: Request, res: Response) => {
 // GET /api/admin/users — list all users
 router.get("/users", async (req: Request, res: Response) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -126,8 +126,8 @@ router.get("/render-jobs", async (req: Request, res: Response) => {
   try {
     const rawStatus = req.query.status as string | undefined;
     const status = rawStatus && VALID_RENDER_STATUSES.includes(rawStatus as any) ? rawStatus : undefined;
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
 
     const where = status ? { status: status as any } : {};
     const [jobs, total] = await Promise.all([

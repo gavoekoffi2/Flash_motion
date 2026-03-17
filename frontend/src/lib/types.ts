@@ -84,3 +84,14 @@ export interface RenderJob {
   createdAt: string;
   downloadUrl?: string | null;
 }
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  plan: string;
+  createdAt: string;
+  _count: { projects: number };
+  quota: { llmCallsToday: number; rendersToday: number; storageUsedMb: number } | null;
+}

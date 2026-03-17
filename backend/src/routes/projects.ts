@@ -69,8 +69,8 @@ const updateStoryboardSchema = z.object({
 // ── GET /api/projects — list user's projects (paginated) ──
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
     const skip = (page - 1) * limit;
 
     const [projects, total] = await Promise.all([
@@ -245,10 +245,21 @@ router.post("/:id/generate-storyboard", async (req: Request, res: Response) => {
     });
     if (!project) return res.status(404).json({ error: "Project not found" });
 
-    // Check and auto-reset quota
+    // Check and auto-reset quota (atomic increment to prevent race condition)
     const quota = await checkAndResetQuota(req.user!.userId);
     if (quota && quota.llmCallsToday >= quota.llmCallsLimit) {
       return res.status(429).json({ error: "Daily LLM quota exceeded" });
+    }
+
+    // Atomically increment quota before the expensive LLM call
+    if (quota) {
+      const updated = await prisma.quota.updateMany({
+        where: { userId: req.user!.userId, llmCallsToday: { lt: quota.llmCallsLimit } },
+        data: { llmCallsToday: { increment: 1 } },
+      });
+      if (updated.count === 0) {
+        return res.status(429).json({ error: "Daily LLM quota exceeded" });
+      }
     }
 
     const assetList = project.assets.map((a) => ({
@@ -263,19 +274,13 @@ router.post("/:id/generate-storyboard", async (req: Request, res: Response) => {
       project.aspectRatio,
     );
 
-    await prisma.$transaction([
-      prisma.project.update({
-        where: { id: project.id },
-        data: {
-          storyboard: storyboard as object,
-          status: "STORYBOARD_READY",
-        },
-      }),
-      ...(quota ? [prisma.quota.update({
-        where: { userId: req.user!.userId },
-        data: { llmCallsToday: { increment: 1 } },
-      })] : []),
-    ]);
+    await prisma.project.update({
+      where: { id: project.id },
+      data: {
+        storyboard: storyboard as object,
+        status: "STORYBOARD_READY",
+      },
+    });
 
     return res.json({ storyboard });
   } catch (err) {
@@ -323,6 +328,9 @@ router.post("/:id/generate-tts", async (req: Request, res: Response) => {
     }
 
     const storyboard = project.storyboard as any;
+    if (!storyboard.scenes || !Array.isArray(storyboard.scenes) || storyboard.scenes.length === 0) {
+      return res.status(400).json({ error: "Storyboard has no valid scenes" });
+    }
     const results = await generateProjectTTS(storyboard.scenes, project.id);
 
     // Update storyboard with TTS audio_clip references
@@ -363,10 +371,21 @@ router.post("/:id/render", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Generate storyboard first" });
     }
 
-    // Check and auto-reset quota
+    // Check and auto-reset quota (atomic increment to prevent race condition)
     const quota = await checkAndResetQuota(req.user!.userId);
     if (quota && quota.rendersToday >= quota.rendersLimit) {
       return res.status(429).json({ error: "Daily render quota exceeded" });
+    }
+
+    // Atomically increment quota before creating render job
+    if (quota) {
+      const updated = await prisma.quota.updateMany({
+        where: { userId: req.user!.userId, rendersToday: { lt: quota.rendersLimit } },
+        data: { rendersToday: { increment: 1 } },
+      });
+      if (updated.count === 0) {
+        return res.status(429).json({ error: "Daily render quota exceeded" });
+      }
     }
 
     // Use transaction for atomicity
@@ -386,15 +405,12 @@ router.post("/:id/render", async (req: Request, res: Response) => {
         data: { status: "RENDERING" },
       });
 
-      if (quota) {
-        await tx.quota.update({
-          where: { userId: req.user!.userId },
-          data: { rendersToday: { increment: 1 } },
-        });
-      }
-
       return updatedJob;
     });
+
+    if (!renderJob.outputKey) {
+      return res.status(500).json({ error: "Failed to generate render output path" });
+    }
 
     const jobData: RenderJobData = {
       jobId: renderJob.id,
@@ -405,7 +421,7 @@ router.post("/:id/render", async (req: Request, res: Response) => {
         type: a.type,
         s3Key: a.s3Key,
       })),
-      outputKey: renderJob.outputKey!,
+      outputKey: renderJob.outputKey,
     };
 
     await enqueueRender(jobData);

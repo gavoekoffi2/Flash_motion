@@ -1,4 +1,4 @@
-import type { User, Project, Asset, Storyboard, RenderJob } from "./types";
+import type { User, Project, Asset, Storyboard, RenderJob, AdminUser } from "./types";
 
 function getApiBase(): string {
   // Explicit env var takes priority
@@ -21,8 +21,11 @@ class ApiClient {
     if (typeof window === "undefined") return;
     if (token) {
       localStorage.setItem("fm_token", token);
+      // Set cookie for Next.js middleware route protection
+      document.cookie = `fm_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
     } else {
       localStorage.removeItem("fm_token");
+      document.cookie = "fm_token=; path=/; max-age=0";
     }
   }
 
@@ -236,6 +239,37 @@ class ApiClient {
       `/projects/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}`,
       { method: "DELETE" },
     );
+  }
+
+  // ── Admin ──
+  async getAdminStats() {
+    return this.request<{ users: number; projects: number; totalRenders: number; activeRenders: number }>("/admin/stats");
+  }
+
+  async getAdminUsers(page = 1, limit = 20) {
+    return this.request<{ users: AdminUser[]; total: number; page: number; limit: number }>(
+      `/admin/users?page=${page}&limit=${limit}`
+    );
+  }
+
+  async updateUserQuota(userId: string, data: { llmCallsLimit?: number; rendersLimit?: number; storageLimitMb?: number }) {
+    return this.request<{ quota: any }>(`/admin/users/${encodeURIComponent(userId)}/quota`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateUserPlan(userId: string, plan: "FREE" | "PRO" | "ENTERPRISE") {
+    return this.request<{ user: any }>(`/admin/users/${encodeURIComponent(userId)}/plan`, {
+      method: "PUT",
+      body: JSON.stringify({ plan }),
+    });
+  }
+
+  async getAdminRenderJobs(page = 1, limit = 20, status?: string) {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (status) params.set("status", status);
+    return this.request<{ jobs: any[]; total: number; page: number; limit: number }>(`/admin/render-jobs?${params}`);
   }
 }
 
