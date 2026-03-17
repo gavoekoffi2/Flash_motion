@@ -52,3 +52,6 @@ postgres-data/
 # Prisma
 *.db
 *.db-journal
+
+# Redis
+dump.rdb
