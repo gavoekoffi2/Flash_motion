@@ -78,9 +78,18 @@ function buildUserPrompt(script: string, assetIds: { id: string; type: string; f
   return `Script:\n"""${script}"""\n\nAspect ratio: ${aspectRatio}${assetList}\n\nProduce the storyboard JSON now.`;
 }
 
+// ── Timeout-aware fetch ──
+const LLM_TIMEOUT_MS = 60000; // 60 seconds max for LLM calls
+
+function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = LLM_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 // ── OpenRouter call ──
 async function callOpenRouter(messages: { role: string; content: string }[]): Promise<string> {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const res = await fetchWithTimeout("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -107,7 +116,7 @@ async function callOpenRouter(messages: { role: string; content: string }[]): Pr
 
 // ── Ollama call ──
 async function callOllama(messages: { role: string; content: string }[]): Promise<string> {
-  const res = await fetch(`${env.ollamaUrl}/api/chat`, {
+  const res = await fetchWithTimeout(`${env.ollamaUrl}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -116,7 +125,7 @@ async function callOllama(messages: { role: string; content: string }[]): Promis
       stream: false,
       options: { num_predict: 2000, temperature: 0.7 },
     }),
-  });
+  }, 120000); // Ollama local can be slower
 
   if (!res.ok) {
     const body = await res.text();

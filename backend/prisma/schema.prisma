@@ -56,6 +56,7 @@ model Project {
   renderJobs  RenderJob[]
 
   @@index([userId])
+  @@index([userId, updatedAt])
 }
 
 model Asset {
@@ -87,6 +88,8 @@ model RenderJob {
 
   @@index([projectId])
   @@index([status])
+  @@index([projectId, status])
+  @@index([status, createdAt])
 }
 
 enum Role {
