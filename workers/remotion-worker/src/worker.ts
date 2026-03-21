@@ -94,19 +94,25 @@ interface RenderJobData {
 // ── Get signed URLs for assets ──
 async function resolveAssetUrls(assets: RenderJobData["assets"]): Promise<Record<string, string>> {
   const urls: Record<string, string> = {};
+  const failed: string[] = [];
   for (const asset of assets) {
     try {
       const url = await getSignedUrl(
         s3,
         new GetObjectCommand({ Bucket: S3_BUCKET, Key: asset.s3Key }),
-        { expiresIn: 3600 },
+        { expiresIn: 86400 }, // 24h — renders can take a while
       );
       urls[asset.id] = url;
     } catch (err) {
       console.warn(`[Worker] Could not resolve URL for asset ${asset.id} (${asset.s3Key}):`, err);
+      failed.push(asset.id);
     }
   }
-  console.log(`[Worker] Resolved ${Object.keys(urls).length}/${assets.length} asset URLs`);
+  // Fail early if any assets can't be resolved — prevents broken renders
+  if (failed.length > 0) {
+    throw new Error(`Failed to resolve ${failed.length} asset(s): ${failed.join(", ")}. Check S3 connectivity.`);
+  }
+  console.log(`[Worker] Resolved ${Object.keys(urls).length} asset URLs`);
   return urls;
 }
 
@@ -274,6 +280,24 @@ async function processRender(job: Job<RenderJobData>) {
   }
 }
 
+// ── Health check HTTP server (for Docker healthcheck) ──
+import http from "http";
+const HEALTH_PORT = parseInt(process.env.WORKER_HEALTH_PORT || "9000", 10);
+let workerReady = false;
+
+const healthServer = http.createServer((_req, res) => {
+  if (workerReady) {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "ok", concurrency: MAX_CONCURRENT }));
+  } else {
+    res.writeHead(503, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "starting" }));
+  }
+});
+healthServer.listen(HEALTH_PORT, () => {
+  console.log(`[Worker] Health check on :${HEALTH_PORT}`);
+});
+
 // ── Start worker ──
 console.log(`[Worker] Starting render worker (concurrency: ${MAX_CONCURRENT})...`);
 
@@ -283,6 +307,7 @@ const worker = new Worker<RenderJobData>("render", processRender, {
 });
 
 worker.on("ready", () => {
+  workerReady = true;
   console.log("[Worker] Worker ready and listening for jobs");
 });
 
@@ -301,6 +326,8 @@ worker.on("error", (err) => {
 // Graceful shutdown
 async function shutdown(signal: string) {
   console.log(`[Worker] Received ${signal}, shutting down...`);
+  workerReady = false;
+  healthServer.close();
   await worker.close();
   await prisma.$disconnect();
   process.exit(0);
