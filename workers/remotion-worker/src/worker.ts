@@ -11,6 +11,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import path from "path";
 import fs from "fs";
 import dotenv from "dotenv";
+import nodemailer from "nodemailer";
 
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
@@ -41,6 +42,36 @@ const s3 = new S3Client({
   credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
   forcePathStyle: true,
 });
+
+// ── Email notification (optional — sends if SMTP configured) ──
+async function sendRenderCompleteEmail(email: string, projectTitle: string, projectId: string) {
+  const smtpHost = process.env.SMTP_HOST;
+  if (!smtpHost) return; // Skip if no SMTP configured
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: parseInt(process.env.SMTP_PORT || "587", 10),
+      secure: process.env.SMTP_PORT === "465",
+      auth: { user: process.env.SMTP_USER || "", pass: process.env.SMTP_PASS || "" },
+    });
+
+    const appUrl = process.env.APP_URL || process.env.FRONTEND_URL || "http://localhost:3000";
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || "noreply@flashmotion.dev",
+      to: email,
+      subject: `Votre vidéo "${projectTitle}" est prête ! — Flash Motion`,
+      html: `<div style="font-family:system-ui;max-width:600px;margin:0 auto;padding:40px 20px">
+        <h1 style="color:#FF6B35">Vidéo prête !</h1>
+        <p>Le rendu de votre projet <strong>${projectTitle}</strong> est terminé.</p>
+        <a href="${appUrl}/projects/${encodeURIComponent(projectId)}" style="display:inline-block;background:#FF6B35;color:white;padding:12px 30px;border-radius:8px;text-decoration:none;margin-top:20px">Voir et télécharger</a>
+      </div>`,
+    });
+    console.log(`[Worker] Render notification sent to ${email}`);
+  } catch (err) {
+    console.warn("[Worker] Failed to send render email:", err);
+  }
+}
 
 // ── Ensure temp directory ──
 if (!fs.existsSync(TEMP_DIR)) {
@@ -207,10 +238,14 @@ async function processRender(job: Job<RenderJobData>) {
       data: { status: "DONE", finishedAt: new Date() },
     });
 
-    await prisma.project.update({
+    const project = await prisma.project.update({
       where: { id: projectId },
       data: { status: "DONE" },
+      include: { user: { select: { email: true } } },
     });
+
+    // Send email notification (non-blocking)
+    sendRenderCompleteEmail(project.user.email, storyboard.project_title || "Votre projet", projectId).catch(() => {});
 
     console.log(`[Worker] Job ${jobId} completed successfully.`);
   } catch (err) {
