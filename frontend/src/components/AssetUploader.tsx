@@ -14,11 +14,11 @@ interface FilePreview {
   preview: string | null;
 }
 
+// SVG excluded — can contain embedded JavaScript (XSS risk), rejected by backend
 const ACCEPTED = {
   "image/png": [".png"],
   "image/jpeg": [".jpg", ".jpeg"],
   "image/webp": [".webp"],
-  "image/svg+xml": [".svg"],
   "audio/mpeg": [".mp3"],
   "audio/wav": [".wav"],
   "font/woff": [".woff"],
@@ -95,7 +95,7 @@ export default function AssetUploader({ projectId, onUploaded }: Props) {
             <div className="text-3xl mb-2 text-gray-500">+</div>
             <p className="text-gray-400 mb-1">Glissez-déposez vos fichiers ici ou cliquez pour parcourir</p>
             <p className="text-xs text-gray-500">
-              Images (PNG, JPG, WebP, SVG), Audio (MP3, WAV), Fonts (WOFF, TTF) — Max 8 MB par fichier
+              Images (PNG, JPG, WebP), Audio (MP3, WAV), Fonts (WOFF, TTF) — Max 8 MB par fichier
             </p>
           </div>
         )}

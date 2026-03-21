@@ -7,24 +7,15 @@ const footerLinks = {
     { label: "Features", href: "#features" },
     { label: "Pricing", href: "#pricing" },
     { label: "Templates", href: "#showcase" },
-    { label: "API", href: "#" },
   ],
-  Company: [
-    { label: "About", href: "#" },
-    { label: "Blog", href: "#" },
-    { label: "Careers", href: "#" },
-    { label: "Contact", href: "#" },
-  ],
-  Resources: [
-    { label: "Documentation", href: "#" },
-    { label: "Help Center", href: "#" },
-    { label: "Community", href: "#" },
-    { label: "Status", href: "#" },
+  Platform: [
+    { label: "Dashboard", href: "/dashboard" },
+    { label: "Créer un projet", href: "/projects/new" },
+    { label: "Paramètres", href: "/settings" },
   ],
   Legal: [
-    { label: "Privacy", href: "#" },
-    { label: "Terms", href: "#" },
-    { label: "Cookie Policy", href: "#" },
+    { label: "Conditions d'utilisation", href: "/terms" },
+    { label: "Politique de confidentialité", href: "/privacy" },
   ],
 };
 
@@ -32,7 +23,7 @@ export default function Footer() {
   return (
     <footer className="relative bg-dark-950 border-t border-white/5">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">

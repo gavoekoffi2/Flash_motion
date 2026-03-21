@@ -43,7 +43,7 @@ export default function AdminUsersPage() {
     try {
       await api.updateUserPlan(userId, plan);
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, plan } : u)));
-      toast("Plan mis a jour", "success");
+      toast("Plan mis à jour", "success");
     } catch (err: any) {
       toast(err.message, "error");
     } finally {
@@ -65,7 +65,7 @@ export default function AdminUsersPage() {
     setSavingQuota(true);
     try {
       await api.updateUserQuota(editingQuota, quotaForm);
-      toast("Quotas mis a jour", "success");
+      toast("Quotas mis à jour", "success");
       setEditingQuota(null);
       fetchUsers();
     } catch (err: any) {
@@ -261,7 +261,7 @@ export default function AdminUsersPage() {
                 disabled={page === 1}
                 className="px-3 py-1.5 text-sm rounded-lg bg-dark-900 border border-dark-700 hover:border-brand-500/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
-                Precedent
+                Précédent
               </button>
               <span className="text-sm text-gray-400">
                 {page} / {totalPages}

@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import type { Quota, User } from "@/lib/types";
 
 export default function SettingsPage() {
   const { user, loading } = useRequireAuth();
@@ -22,7 +23,7 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
-  const [quota, setQuota] = useState<any>(null);
+  const [quota, setQuota] = useState<Quota | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -30,8 +31,11 @@ export default function SettingsPage() {
       setEmail(user.email || "");
       // Load quota info
       api.me().then(({ user: u }) => {
-        if ((u as any).quota) setQuota((u as any).quota);
-      }).catch(() => {});
+        const q = (u as User & { quota?: Quota }).quota;
+        if (q) setQuota(q);
+      }).catch((err: any) => {
+        toast("Impossible de charger les quotas", "error");
+      });
     }
   }, [user]);
 

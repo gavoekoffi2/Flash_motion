@@ -85,6 +85,15 @@ export interface RenderJob {
   downloadUrl?: string | null;
 }
 
+export interface Quota {
+  llmCallsToday: number;
+  rendersToday: number;
+  storageUsedMb: number;
+  llmCallsLimit: number;
+  rendersLimit: number;
+  storageLimitMb: number;
+}
+
 export interface AdminUser {
   id: string;
   email: string;

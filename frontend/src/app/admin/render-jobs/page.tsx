@@ -18,8 +18,8 @@ const statusLabels: Record<string, string> = {
   QUEUED: "En attente",
   RENDERING: "Rendu...",
   UPLOADING: "Upload...",
-  DONE: "Termine",
-  FAILED: "Echoue",
+  DONE: "Terminé",
+  FAILED: "Échoué",
 };
 
 export default function AdminRenderJobsPage() {
@@ -98,7 +98,7 @@ export default function AdminRenderJobsPage() {
         </div>
       ) : jobs.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-gray-400">Aucun job de rendu trouve</p>
+          <p className="text-gray-400">Aucun job de rendu trouvé</p>
         </div>
       ) : (
         <>
@@ -110,9 +110,9 @@ export default function AdminRenderJobsPage() {
                   <th className="pb-3 pr-4 font-medium">Projet</th>
                   <th className="pb-3 pr-4 font-medium">Statut</th>
                   <th className="pb-3 pr-4 font-medium">Moteur</th>
-                  <th className="pb-3 pr-4 font-medium">Cree le</th>
-                  <th className="pb-3 pr-4 font-medium">Demarre</th>
-                  <th className="pb-3 font-medium">Termine</th>
+                  <th className="pb-3 pr-4 font-medium">Créé le</th>
+                  <th className="pb-3 pr-4 font-medium">Démarré</th>
+                  <th className="pb-3 font-medium">Terminé</th>
                 </tr>
               </thead>
               <tbody>
@@ -150,9 +150,9 @@ export default function AdminRenderJobsPage() {
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400">
                   <span>Moteur: {job.engine || "—"}</span>
-                  <span>Cree: {formatDate(job.createdAt)}</span>
-                  {job.startedAt && <span>Demarre: {formatDate(job.startedAt)}</span>}
-                  {job.finishedAt && <span>Termine: {formatDate(job.finishedAt)}</span>}
+                  <span>Créé : {formatDate(job.createdAt)}</span>
+                  {job.startedAt && <span>Démarré: {formatDate(job.startedAt)}</span>}
+                  {job.finishedAt && <span>Terminé: {formatDate(job.finishedAt)}</span>}
                 </div>
                 {job.error && (
                   <p className="text-xs text-red-400 mt-2 truncate" title={job.error}>
@@ -171,7 +171,7 @@ export default function AdminRenderJobsPage() {
                 disabled={page === 1}
                 className="px-3 py-1.5 text-sm rounded-lg bg-dark-900 border border-dark-700 hover:border-brand-500/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
-                Precedent
+                Précédent
               </button>
               <span className="text-sm text-gray-400">
                 {page} / {totalPages}

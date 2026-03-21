@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/Toast";
 
 interface Asset {
   id: string;
@@ -20,6 +21,7 @@ interface Props {
 
 export default function AssetManager({ projectId, assets, onChanged }: Props) {
   const [deleting, setDeleting] = useState<string | null>(null);
+  const { toast } = useToast();
 
   async function handleDelete(assetId: string) {
     if (!confirm("Supprimer cet asset ?")) return;
@@ -27,8 +29,8 @@ export default function AssetManager({ projectId, assets, onChanged }: Props) {
     try {
       await api.deleteAsset(projectId, assetId);
       onChanged();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      toast(err.message || "Impossible de supprimer l'asset", "error");
     } finally {
       setDeleting(null);
     }

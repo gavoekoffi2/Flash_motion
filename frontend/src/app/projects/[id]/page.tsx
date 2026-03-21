@@ -43,8 +43,8 @@ export default function ProjectPage() {
     try {
       const { assets: a } = await api.listAssets(projectId);
       setAssets(a);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      toast(err.message || "Impossible de charger les assets", "error");
     }
   }, [projectId]);
 
@@ -69,8 +69,8 @@ export default function ProjectPage() {
           toast("Le rendu a échoué", "error");
           loadProject();
         }
-      } catch (err) {
-        console.error(err);
+      } catch {
+        // Silently retry on next poll interval
       }
     }, 3000);
     return () => clearInterval(interval);

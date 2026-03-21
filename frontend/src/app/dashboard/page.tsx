@@ -15,13 +15,14 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [projects, setProjects] = useState<any[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       api.listProjects()
-        .then(({ projects }) => setProjects(projects))
-        .catch(console.error)
+        .then(({ projects }) => { setProjects(projects); setLoadError(false); })
+        .catch((err) => { toast(err.message, "error"); setLoadError(true); })
         .finally(() => setLoadingProjects(false));
     }
   }, [user]);
@@ -103,7 +104,17 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {loadingProjects ? (
+        {loadError ? (
+          <div className="text-center py-20 animate-fade-in">
+            <p className="text-red-400 mb-4">Impossible de charger vos projets</p>
+            <button
+              onClick={() => { setLoadingProjects(true); setLoadError(false); api.listProjects().then(({ projects }) => setProjects(projects)).catch((err) => { toast(err.message, "error"); setLoadError(true); }).finally(() => setLoadingProjects(false)); }}
+              className="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-lg text-sm transition-colors"
+            >
+              Réessayer
+            </button>
+          </div>
+        ) : loadingProjects ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-dark-800 border border-dark-700 rounded-xl p-5 animate-pulse">
