@@ -168,21 +168,42 @@ router.post("/:id/duplicate", async (req: Request, res: Response) => {
   try {
     const original = await prisma.project.findFirst({
       where: { id: req.params.id, userId: req.user!.userId },
+      include: { assets: true },
     });
     if (!original) return res.status(404).json({ error: "Project not found" });
 
-    const project = await prisma.project.create({
-      data: {
-        userId: req.user!.userId,
-        title: `${original.title.slice(0, 192)} (copie)`,
-        script: original.script,
-        aspectRatio: original.aspectRatio,
-        template: original.template,
-        storyboard: original.storyboard || undefined,
-        brandConfig: original.brandConfig || undefined,
-        status: original.storyboard ? "STORYBOARD_READY" : "DRAFT",
-      },
+    const project = await prisma.$transaction(async (tx) => {
+      const dup = await tx.project.create({
+        data: {
+          userId: req.user!.userId,
+          title: `${original.title.slice(0, 192)} (copie)`,
+          script: original.script,
+          aspectRatio: original.aspectRatio,
+          template: original.template,
+          storyboard: original.storyboard || undefined,
+          brandConfig: original.brandConfig || undefined,
+          status: original.storyboard ? "STORYBOARD_READY" : "DRAFT",
+        },
+      });
+
+      // Copy asset references (same S3 files, new DB records)
+      if (original.assets.length > 0) {
+        await tx.asset.createMany({
+          data: original.assets.map((a) => ({
+            projectId: dup.id,
+            type: a.type,
+            filename: a.filename,
+            mimeType: a.mimeType,
+            sizeMb: a.sizeMb,
+            s3Key: a.s3Key,
+            metadata: a.metadata || undefined,
+          })),
+        });
+      }
+
+      return dup;
     });
+
     return res.status(201).json({ project });
   } catch (err) {
     console.error("[Projects] Duplicate error:", err);
@@ -369,6 +390,17 @@ router.post("/:id/render", async (req: Request, res: Response) => {
     if (!project) return res.status(404).json({ error: "Project not found" });
     if (!project.storyboard) {
       return res.status(400).json({ error: "Generate storyboard first" });
+    }
+
+    // Prevent duplicate renders — check for existing active render job
+    const activeJob = await prisma.renderJob.findFirst({
+      where: { projectId: project.id, status: { in: ["QUEUED", "RENDERING", "UPLOADING"] } },
+    });
+    if (activeJob) {
+      return res.status(409).json({
+        error: "Un rendu est déjà en cours pour ce projet",
+        renderJob: { id: activeJob.id, status: activeJob.status },
+      });
     }
 
     // Check and auto-reset quota (atomic increment to prevent race condition)

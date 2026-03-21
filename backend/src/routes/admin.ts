@@ -97,8 +97,14 @@ router.put("/users/:id/quota", async (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/admin/users/:id/plan — update user plan
+// PUT /api/admin/users/:id/plan — update user plan + sync quota limits
 const planSchema = z.object({ plan: z.enum(["FREE", "PRO", "ENTERPRISE"]) });
+
+const PLAN_QUOTAS: Record<string, { llmCallsLimit: number; rendersLimit: number; storageLimitMb: number }> = {
+  FREE: { llmCallsLimit: 20, rendersLimit: 5, storageLimitMb: 500 },
+  PRO: { llmCallsLimit: 100, rendersLimit: 30, storageLimitMb: 5000 },
+  ENTERPRISE: { llmCallsLimit: 500, rendersLimit: 100, storageLimitMb: 50000 },
+};
 
 router.put("/users/:id/plan", async (req: Request, res: Response) => {
   try {
@@ -107,13 +113,21 @@ router.put("/users/:id/plan", async (req: Request, res: Response) => {
     const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "User not found" });
 
-    const user = await prisma.user.update({
-      where: { id: req.params.id },
-      data: { plan },
-      select: { id: true, email: true, plan: true },
-    });
+    // Update plan and sync quota limits in a transaction
+    const [user, quota] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: req.params.id },
+        data: { plan },
+        select: { id: true, email: true, plan: true },
+      }),
+      prisma.quota.upsert({
+        where: { userId: req.params.id },
+        create: { userId: req.params.id, ...PLAN_QUOTAS[plan] },
+        update: PLAN_QUOTAS[plan],
+      }),
+    ]);
 
-    return res.json({ user });
+    return res.json({ user, quota });
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ error: "Validation error", details: err.errors });
     console.error("[Admin] Update plan error:", err);

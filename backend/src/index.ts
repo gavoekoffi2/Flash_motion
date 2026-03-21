@@ -62,6 +62,15 @@ app.use("/api/auth/reset-password", rateLimit({
   legacyHeaders: false,
 }));
 
+// ── Rate limiter — render endpoint (expensive operation) ──
+app.use("/api/projects/:id/render", rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: { error: "Trop de rendus lancés. Veuillez patienter." },
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
+
 // ── Routes ──
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);

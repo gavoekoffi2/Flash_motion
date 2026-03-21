@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { env } from "../config/env";
 
 // ── Storyboard JSON schema the LLM must produce ──
@@ -19,6 +20,34 @@ export interface Storyboard {
   brand: { primary_color: string; logo_id: string | null };
   caption_short: string;
 }
+
+// Zod validation for LLM output — coerce/fix common LLM mistakes
+const llmSceneSchema = z.object({
+  id: z.number(),
+  duration_s: z.number().min(1).max(30).default(3),
+  type: z.enum(["hero", "carousel", "feature_list", "demo", "outro"]).catch("hero"),
+  text: z.string().max(300).default(""),
+  assets: z.array(z.object({
+    type: z.string(),
+    id: z.string(),
+    placement: z.string().default("center"),
+    scale: z.string().default("contain"),
+  })).default([]),
+  animation: z.string().default("fade_in_up"),
+  audio_clip: z.string().nullable().default(null),
+  tts_instruction: z.string().nullable().default(null),
+});
+
+const llmStoryboardSchema = z.object({
+  project_title: z.string().default("Untitled"),
+  aspect_ratio: z.enum(["9:16", "16:9", "1:1"]).default("9:16"),
+  scenes: z.array(llmSceneSchema).min(1),
+  brand: z.object({
+    primary_color: z.string().default("#FF6B35"),
+    logo_id: z.string().nullable().default(null),
+  }).default({ primary_color: "#FF6B35", logo_id: null }),
+  caption_short: z.string().max(280).default(""),
+});
 
 const SYSTEM_PROMPT = `You are a motion design storyboard AI. Given a marketing script and a list of uploaded assets, produce a JSON storyboard.
 
@@ -141,12 +170,21 @@ export async function generateStoryboard(
   const jsonStr = extractJson(raw);
 
   try {
-    const storyboard = JSON.parse(jsonStr) as Storyboard;
-    // Basic validation
-    if (!storyboard.scenes || !Array.isArray(storyboard.scenes) || storyboard.scenes.length === 0) {
-      throw new Error("Storyboard must contain at least one scene");
+    const parsed = JSON.parse(jsonStr);
+    // Validate and coerce LLM output through strict Zod schema
+    const storyboard = llmStoryboardSchema.parse(parsed);
+
+    // Ensure total duration is within 15-60s range
+    const totalDuration = storyboard.scenes.reduce((sum, s) => sum + s.duration_s, 0);
+    if (totalDuration > 120) {
+      // Scale down scene durations proportionally
+      const factor = 60 / totalDuration;
+      storyboard.scenes.forEach((s) => {
+        s.duration_s = Math.max(1, Math.round(s.duration_s * factor));
+      });
     }
-    return storyboard;
+
+    return storyboard as Storyboard;
   } catch (err) {
     console.error("[LLM] Failed to parse storyboard. Raw output:", raw.slice(0, 500));
     throw new Error(`Failed to parse storyboard from LLM response: ${(err as Error).message}`);

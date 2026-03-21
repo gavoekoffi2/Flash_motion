@@ -14,20 +14,31 @@ const ALLOWED_FONT_TYPES = [
 ];
 const ALL_ALLOWED = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_AUDIO_TYPES, ...ALLOWED_FONT_TYPES];
 
-// Magic byte signatures for allowed image types
+// Magic byte signatures for allowed file types
 const MAGIC_BYTES: Record<string, number[][]> = {
+  // Images
   "image/png": [[0x89, 0x50, 0x4E, 0x47]],
   "image/jpeg": [[0xFF, 0xD8, 0xFF]],
   "image/webp": [[0x52, 0x49, 0x46, 0x46]], // RIFF header
+  // Audio
+  "audio/mpeg": [[0xFF, 0xFB], [0xFF, 0xFA], [0xFF, 0xF3], [0xFF, 0xF2], [0x49, 0x44, 0x33]], // MP3 sync words + ID3 tag
+  "audio/mp3": [[0xFF, 0xFB], [0xFF, 0xFA], [0xFF, 0xF3], [0xFF, 0xF2], [0x49, 0x44, 0x33]],
+  "audio/wav": [[0x52, 0x49, 0x46, 0x46]], // RIFF header
+  // Fonts
+  "font/woff": [[0x77, 0x4F, 0x46, 0x46]],  // wOFF
+  "font/woff2": [[0x77, 0x4F, 0x46, 0x32]], // wOF2
+  "font/ttf": [[0x00, 0x01, 0x00, 0x00]],
+  "application/x-font-ttf": [[0x00, 0x01, 0x00, 0x00]],
+  "application/x-font-woff": [[0x77, 0x4F, 0x46, 0x46]],
+  "application/font-woff": [[0x77, 0x4F, 0x46, 0x46]],
 };
 
 /**
  * Verify that the file buffer matches expected magic bytes for the claimed MIME type.
- * Returns true for non-image types (audio/fonts) since they are less exploitable.
  */
 export function verifyMagicBytes(buffer: Buffer, mimetype: string): boolean {
   const signatures = MAGIC_BYTES[mimetype];
-  if (!signatures) return true; // No magic byte check for audio/fonts
+  if (!signatures) return true; // No signatures defined for this type — allow
   return signatures.some(sig =>
     sig.every((byte, i) => buffer.length > i && buffer[i] === byte)
   );
