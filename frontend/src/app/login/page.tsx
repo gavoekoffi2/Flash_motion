@@ -13,7 +13,9 @@ export default function LoginPage() {
   const { login, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/dashboard";
+  // Validate redirect URL is relative to prevent open redirect attacks
+  const rawRedirect = searchParams.get("redirect") || "/dashboard";
+  const redirectTo = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/dashboard";
 
   // Redirect if already logged in
   useEffect(() => {

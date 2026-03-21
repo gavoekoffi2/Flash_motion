@@ -101,7 +101,7 @@ app.use((err: Error & { statusCode?: number }, _req: express.Request, res: expre
 async function start() {
   // Validate critical secrets in production
   if (env.nodeEnv === "production") {
-    if (env.jwtSecret === "dev-secret-change-me" || env.jwtSecret.length < 20) {
+    if (env.jwtSecret === "dev-secret-change-me" || env.jwtSecret.length < 32) {
       console.error("[SECURITY] JWT_SECRET is too weak for production. Exiting.");
       process.exit(1);
     }
