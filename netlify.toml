@@ -9,17 +9,17 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  # Direct API calls to backend VPS — no proxy needed
+  # Frontend calls backend API directly (cross-origin)
   NEXT_PUBLIC_API_URL = "https://api.finablasolution.cloud/api"
 
 # Netlify Next.js runtime plugin — handles SSR, API routes, image optimization
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Proxy API calls to backend VPS
+# Fallback proxy: if frontend uses relative /api paths, proxy to backend VPS
 [[redirects]]
   from = "/api/*"
-  to = "${BACKEND_URL}/api/:splat"
+  to = "https://api.finablasolution.cloud/api/:splat"
   status = 200
   force = true
   [redirects.headers]
