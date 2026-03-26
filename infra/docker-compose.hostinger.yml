@@ -68,9 +68,16 @@ services:
       - web
     labels:
       - "traefik.enable=true"
+      # HTTPS router
       - "traefik.http.routers.flashmotion-api.rule=Host(`${API_DOMAIN:-api.finablasolution.cloud}`)"
       - "traefik.http.routers.flashmotion-api.entrypoints=websecure"
       - "traefik.http.routers.flashmotion-api.tls.certresolver=letsencrypt"
+      # HTTP router (redirect to HTTPS)
+      - "traefik.http.routers.flashmotion-api-http.rule=Host(`${API_DOMAIN:-api.finablasolution.cloud}`)"
+      - "traefik.http.routers.flashmotion-api-http.entrypoints=web"
+      - "traefik.http.routers.flashmotion-api-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      # Service
       - "traefik.http.services.flashmotion-api.loadbalancer.server.port=4000"
       - "traefik.docker.network=web"
     environment:
@@ -83,7 +90,7 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       S3_BUCKET: flash-motion
       JWT_SECRET: ${JWT_SECRET}
-      FRONTEND_URL: ${FRONTEND_URL:-https://finablasolution.cloud}
+      FRONTEND_URL: ${FRONTEND_URL:-https://finablasolution.cloud,https://flashmotion.netlify.app}
       LLM_MODE: ${LLM_MODE:-auto}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-mistralai/mistral-7b-instruct}

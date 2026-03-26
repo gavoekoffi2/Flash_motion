@@ -9,6 +9,8 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # Direct API calls to backend VPS — no proxy needed
+  NEXT_PUBLIC_API_URL = "https://api.finablasolution.cloud/api"
 
 # Netlify Next.js runtime plugin — handles SSR, API routes, image optimization
 [[plugins]]
