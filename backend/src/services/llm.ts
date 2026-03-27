@@ -78,23 +78,40 @@ function buildUserPrompt(script: string, assetIds: { id: string; type: string; f
   return `Script:\n"""${script}"""\n\nAspect ratio: ${aspectRatio}${assetList}\n\nProduce the storyboard JSON now.`;
 }
 
-// ── Timeout-aware fetch ──
-const LLM_TIMEOUT_MS = 60000; // 60 seconds max for LLM calls
+// ── Timeout-aware fetch with proper error handling ──
+const LLM_TIMEOUT_MS = 60000; // 60s for cloud APIs
+const OLLAMA_TIMEOUT_MS = 120000; // 120s for local Ollama
 
-function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = LLM_TIMEOUT_MS): Promise<Response> {
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      throw new Error(`LLM request timed out after ${Math.round(timeoutMs / 1000)}s — the model is too slow or unreachable.`);
+    }
+    // Network errors: ECONNREFUSED, ENOTFOUND, etc.
+    const cause = err?.cause?.code || err?.code || err?.message || "unknown";
+    throw new Error(`LLM network error (${cause}). Cannot reach ${new URL(url).hostname}. Check your LLM configuration.`);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ── OpenRouter call ──
 async function callOpenRouter(messages: { role: string; content: string }[]): Promise<string> {
+  if (!env.openrouterApiKey) {
+    throw new Error("OpenRouter API key is not configured (OPENROUTER_API_KEY is empty).");
+  }
+
   const res = await fetchWithTimeout("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${env.openrouterApiKey}`,
-      "HTTP-Referer": env.frontendUrl,
+      "HTTP-Referer": env.frontendUrl.split(",")[0].trim(),
       "X-Title": "Flash Motion",
     },
     body: JSON.stringify({
@@ -103,15 +120,19 @@ async function callOpenRouter(messages: { role: string; content: string }[]): Pr
       max_tokens: 2000,
       temperature: 0.7,
     }),
-  });
+  }, LLM_TIMEOUT_MS);
 
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`OpenRouter error ${res.status}: ${body}`);
+    const body = await res.text().catch(() => "");
+    throw new Error(`OpenRouter HTTP ${res.status}: ${body.slice(0, 200)}`);
   }
 
-  const data = await res.json() as { choices: { message: { content: string } }[] };
-  return data.choices[0].message.content;
+  const data = await res.json() as { choices?: { message?: { content?: string } }[] };
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("OpenRouter returned an empty response — no content in choices[0].message.content");
+  }
+  return content;
 }
 
 // ── Ollama call ──
@@ -125,15 +146,19 @@ async function callOllama(messages: { role: string; content: string }[]): Promis
       stream: false,
       options: { num_predict: 2000, temperature: 0.7 },
     }),
-  }, 120000); // Ollama local can be slower
+  }, OLLAMA_TIMEOUT_MS);
 
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Ollama error ${res.status}: ${body}`);
+    const body = await res.text().catch(() => "");
+    throw new Error(`Ollama HTTP ${res.status}: ${body.slice(0, 200)}`);
   }
 
-  const data = await res.json() as { message: { content: string } };
-  return data.message.content;
+  const data = await res.json() as { message?: { content?: string } };
+  const content = data?.message?.content;
+  if (!content) {
+    throw new Error("Ollama returned an empty response — no message.content");
+  }
+  return content;
 }
 
 // ── Unified LLM call with fallback ──
@@ -143,8 +168,17 @@ async function callLLM(messages: { role: string; content: string }[]): Promise<s
       return await callOpenRouter(messages);
     } catch (err) {
       if (env.llmMode === "auto") {
-        console.warn("[LLM] OpenRouter failed, falling back to Ollama:", err);
-        return await callOllama(messages);
+        console.warn("[LLM] OpenRouter failed, falling back to Ollama:", (err as Error).message);
+        try {
+          return await callOllama(messages);
+        } catch (ollamaErr) {
+          throw new Error(
+            `Both LLM providers failed.\n` +
+            `OpenRouter: ${(err as Error).message}\n` +
+            `Ollama: ${(ollamaErr as Error).message}\n` +
+            `Configure OPENROUTER_API_KEY or ensure Ollama is running.`
+          );
+        }
       }
       throw err;
     }

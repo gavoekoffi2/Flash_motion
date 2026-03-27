@@ -304,9 +304,10 @@ router.post("/:id/generate-storyboard", async (req: Request, res: Response) => {
     });
 
     return res.json({ storyboard });
-  } catch (err) {
+  } catch (err: any) {
     console.error("[Projects] Generate storyboard error:", err);
-    return res.status(500).json({ error: "Storyboard generation failed" });
+    const message = err?.message || "Storyboard generation failed";
+    return res.status(500).json({ error: message });
   }
 });
 
