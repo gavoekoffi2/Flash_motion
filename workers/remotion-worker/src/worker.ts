@@ -11,6 +11,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import path from "path";
 import fs from "fs";
 import dotenv from "dotenv";
+import { generateStoryboardAudio } from "./services/tts";
 
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
@@ -22,6 +23,9 @@ const S3_SECRET_KEY = process.env.S3_SECRET_KEY || "minioadmin";
 const S3_BUCKET = process.env.S3_BUCKET || "flash-motion";
 const S3_REGION = process.env.S3_REGION || "us-east-1";
 const TEMP_DIR = process.env.TEMP_DIR || "/tmp/flash-motion";
+const S3_PUBLIC_ENDPOINT = process.env.S3_PUBLIC_ENDPOINT || S3_ENDPOINT;
+const TTS_ENABLED = process.env.TTS_ENABLED !== "false"; // enabled by default
+const TTS_LANG = process.env.TTS_LANG || "fr";
 const MAX_CONCURRENT = parseInt(process.env.MAX_CONCURRENT_RENDERS || "1", 10);
 const RENDER_TIMEOUT_MS = parseInt(process.env.RENDER_TIMEOUT_MS || "300000", 10);
 /* Bundle cache - reuse across renders to avoid re-bundling every job */
@@ -98,7 +102,7 @@ async function resolveAssetUrls(assets: RenderJobData["assets"]): Promise<Record
 // ── Determine composition based on aspect ratio and scene type ──
 function getCompositionId(template: string, aspectRatio: string): string {
   const aspectSuffix = aspectRatio === "16:9" ? "-16x9" : aspectRatio === "1:1" ? "-1x1" : "";
-  const validTemplates = ["HeroPromo", "Carousel", "FeatureList", "Demo", "Outro", "EcommerceShowcase", "Testimonial", "Educational", "SaasLaunch"];
+  const validTemplates = ["HeroPromo", "Carousel", "FeatureList", "Demo", "Outro", "EcommerceShowcase", "Testimonial", "Educational", "SaasLaunch", "CinematicPromo"];
   const base = validTemplates.includes(template) ? template : "HeroPromo";
   return base + aspectSuffix;
 }
@@ -132,6 +136,26 @@ async function processRender(job: Job<RenderJobData>) {
     // 1. Resolve asset URLs
     const assetUrls = await resolveAssetUrls(assets);
 
+    // 1b. Generate TTS voiceover (free, Microsoft Edge)
+    const audioUrls: Record<number, string> = {};
+    if (TTS_ENABLED) {
+      try {
+        const sceneAudioMap = await generateStoryboardAudio(
+          storyboard.scenes,
+          jobId,
+          TTS_LANG,
+          TEMP_DIR,
+          s3,
+          S3_BUCKET,
+          S3_ENDPOINT,
+          S3_PUBLIC_ENDPOINT,
+        );
+        Object.assign(audioUrls, sceneAudioMap);
+      } catch (err) {
+        console.warn("[Worker] TTS generation failed (non-fatal, continuing without audio):", (err as Error).message);
+      }
+    }
+
     // 2. Bundle Remotion project (cached after first render)
     const bundleLocation = await withTimeout(
       getBundleLocation(),
@@ -155,6 +179,7 @@ async function processRender(job: Job<RenderJobData>) {
         scenes: storyboard.scenes,
         brand: storyboard.brand,
         assetUrls,
+        audioUrls,
       },
     });
 
@@ -173,6 +198,7 @@ async function processRender(job: Job<RenderJobData>) {
           scenes: storyboard.scenes,
           brand: storyboard.brand,
           assetUrls,
+          audioUrls,
         },
         onProgress: ({ progress }) => {
           const pct = Math.round(progress * 100);

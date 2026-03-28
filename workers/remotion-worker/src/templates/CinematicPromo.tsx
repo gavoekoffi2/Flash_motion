@@ -7,6 +7,7 @@ import {
   interpolate,
   spring,
   Img,
+  Audio,
 } from "remotion";
 
 // ── Color utilities ──
@@ -79,6 +80,7 @@ export interface CinematicPromoProps {
   scenes: Scene[];
   brand: Brand;
   assetUrls: Record<string, string>;
+  audioUrls?: Record<number, string>;
 }
 
 // ── Safe Image ──
@@ -1106,10 +1108,12 @@ function CinematicScene({
   scene,
   brand,
   assetUrls,
+  audioUrls,
 }: {
   scene: Scene;
   brand: Brand;
   assetUrls: Record<string, string>;
+  audioUrls?: Record<number, string>;
 }) {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
@@ -1135,6 +1139,8 @@ function CinematicScene({
     }
   })();
 
+  const audioUrl = audioUrls?.[scene.id];
+
   return (
     <AbsoluteFill
       style={{
@@ -1144,6 +1150,14 @@ function CinematicScene({
       }}
     >
       {content}
+      {audioUrl && (
+        <Audio
+          src={audioUrl}
+          volume={0.9}
+          startFrom={0}
+          endAt={scene.duration_s * 30}
+        />
+      )}
     </AbsoluteFill>
   );
 }
@@ -1153,6 +1167,7 @@ export const CinematicPromo: React.FC<CinematicPromoProps> = ({
   scenes,
   brand,
   assetUrls,
+  audioUrls,
 }) => {
   const { fps } = useVideoConfig();
 
@@ -1166,7 +1181,7 @@ export const CinematicPromo: React.FC<CinematicPromoProps> = ({
 
         return (
           <Sequence key={scene.id} from={from} durationInFrames={durationFrames}>
-            <CinematicScene scene={scene} brand={brand} assetUrls={assetUrls} />
+            <CinematicScene scene={scene} brand={brand} assetUrls={assetUrls} audioUrls={audioUrls} />
           </Sequence>
         );
       })}

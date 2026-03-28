@@ -7,6 +7,7 @@ import {
   interpolate,
   spring,
   Img,
+  Audio,
 } from "remotion";
 
 // ── Types ──
@@ -39,6 +40,7 @@ export interface HeroPromoProps {
   scenes: Scene[];
   brand: Brand;
   assetUrls: Record<string, string>;
+  audioUrls?: Record<number, string>;
 }
 
 // ── Animation helpers — all scene types supported ──
@@ -107,10 +109,12 @@ function SceneRenderer({
   scene,
   brand,
   assetUrls,
+  audioUrls,
 }: {
   scene: Scene;
   brand: Brand;
   assetUrls: Record<string, string>;
+  audioUrls?: Record<number, string>;
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -283,12 +287,16 @@ function SceneRenderer({
       <div style={{ position: "absolute", bottom: 20, right: 20, fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
         {scene.id}
       </div>
+      {/* Voix off */}
+      {audioUrls?.[scene.id] && (
+        <Audio src={audioUrls[scene.id]} volume={0.9} startFrom={0} endAt={scene.duration_s * 30} />
+      )}
     </AbsoluteFill>
   );
 }
 
 // ── Main composition ──
-export const HeroPromo: React.FC<HeroPromoProps> = ({ scenes, brand, assetUrls }) => {
+export const HeroPromo: React.FC<HeroPromoProps> = ({ scenes, brand, assetUrls, audioUrls }) => {
   const { fps } = useVideoConfig();
 
   let frameOffset = 0;
@@ -301,7 +309,7 @@ export const HeroPromo: React.FC<HeroPromoProps> = ({ scenes, brand, assetUrls }
 
         return (
           <Sequence key={scene.id} from={from} durationInFrames={durationFrames}>
-            <SceneRenderer scene={scene} brand={brand} assetUrls={assetUrls} />
+            <SceneRenderer scene={scene} brand={brand} assetUrls={assetUrls} audioUrls={audioUrls} />
           </Sequence>
         );
       })}
