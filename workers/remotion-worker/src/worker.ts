@@ -24,6 +24,21 @@ const S3_REGION = process.env.S3_REGION || "us-east-1";
 const TEMP_DIR = process.env.TEMP_DIR || "/tmp/flash-motion";
 const MAX_CONCURRENT = parseInt(process.env.MAX_CONCURRENT_RENDERS || "1", 10);
 const RENDER_TIMEOUT_MS = parseInt(process.env.RENDER_TIMEOUT_MS || "300000", 10);
+/* Bundle cache - reuse across renders to avoid re-bundling every job */
+let cachedBundleLocation: string | null = null;
+async function getBundleLocation(): Promise<string> {
+  if (cachedBundleLocation) {
+    console.log("[Worker] Reusing cached bundle");
+    return cachedBundleLocation;
+  }
+  console.log("[Worker] Bundling Remotion project (first time)...");
+  cachedBundleLocation = await bundle({
+    entryPoint: path.resolve(process.cwd(), "src/compositions/index.tsx"),
+    webpackOverride: (config) => config,
+  });
+  console.log("[Worker] Bundle cached at:", cachedBundleLocation);
+  return cachedBundleLocation;
+}
 
 function getRedisOpts() {
   const url = new URL(REDIS_URL);
@@ -117,13 +132,9 @@ async function processRender(job: Job<RenderJobData>) {
     // 1. Resolve asset URLs
     const assetUrls = await resolveAssetUrls(assets);
 
-    // 2. Bundle Remotion project
-    console.log("[Worker] Bundling Remotion project...");
+    // 2. Bundle Remotion project (cached after first render)
     const bundleLocation = await withTimeout(
-      bundle({
-        entryPoint: path.resolve(process.cwd(), "src/compositions/index.tsx"),
-        webpackOverride: (config) => config,
-      }),
+      getBundleLocation(),
       120000,
       "Remotion bundling",
     );
