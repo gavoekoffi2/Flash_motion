@@ -17,6 +17,7 @@ export interface RenderJobData {
   storyboard: object;
   assets: { id: string; type: string; s3Key: string; url?: string }[];
   outputKey: string;
+  template: string;
 }
 
 export async function enqueueRender(data: RenderJobData): Promise<string> {
