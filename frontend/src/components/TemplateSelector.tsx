@@ -46,6 +46,13 @@ const TEMPLATES: TemplateInfo[] = [
     preview: "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)",
     tags: ["SaaS", "Tech", "Startup"],
   },
+  {
+    id: "CinematicPromo",
+    name: "✨ Cinematic Pro",
+    description: "Motion design de qualité supérieure : particules flottantes, typographie cinétique, transitions fluides et effets de lueur.",
+    preview: "linear-gradient(135deg, #6C63FF 0%, #3D37B5 50%, #C77DFF 100%)",
+    tags: ["Premium", "Cinématique", "Motion Design"],
+  },
 ];
 
 interface Props {

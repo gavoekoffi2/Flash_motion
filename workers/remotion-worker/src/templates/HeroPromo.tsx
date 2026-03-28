@@ -29,6 +29,9 @@ interface Scene {
 
 interface Brand {
   primary_color: string;
+  secondary_color?: string;
+  accent_color?: string;
+  text_color?: string;
   logo_id: string | null;
 }
 
@@ -117,11 +120,15 @@ function SceneRenderer({
   const primaryAsset = scene.assets[0];
   const imageUrl = primaryAsset?.url || (primaryAsset?.id ? assetUrls[primaryAsset.id] : null) || null;
   const bgColor = brand.primary_color || "#1a1a2e";
+  const bgSecondary = brand.secondary_color || bgColor;
+  const bgAccent = brand.accent_color || bgColor;
 
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: bgColor,
+        background: bgSecondary !== bgColor
+          ? `linear-gradient(135deg, ${bgColor} 0%, ${bgSecondary} 100%)`
+          : bgColor,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",

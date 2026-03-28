@@ -37,6 +37,8 @@ export default function ProjectPage() {
   const [templateDraft, setTemplateDraft] = useState("");
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [brandColor, setBrandColor] = useState("#FF6B35");
+  const [brandSecondary, setBrandSecondary] = useState("#CC4500");
+  const [brandAccent, setBrandAccent] = useState("#FFB347");
   const [savingBrand, setSavingBrand] = useState(false);
 
   useEffect(() => { checkAuth(); }, [checkAuth]);
@@ -47,6 +49,8 @@ export default function ProjectPage() {
       const { project: p } = await api.getProject(projectId);
       setProject(p);
       if (p.brandConfig?.primary_color) setBrandColor(p.brandConfig.primary_color);
+      if (p.brandConfig?.secondary_color) setBrandSecondary(p.brandConfig.secondary_color);
+      if (p.brandConfig?.accent_color) setBrandAccent(p.brandConfig.accent_color);
       if (p.renderJobs && p.renderJobs.length > 0) setRenderJob(p.renderJobs[0]);
     } catch (err: any) {
       toast(err.message, "error");
@@ -176,13 +180,13 @@ export default function ProjectPage() {
   async function handleSaveBrand() {
     setSavingBrand(true);
     try {
-      await api.updateProject(projectId, { brandConfig: { primary_color: brandColor } });
-      const updatedProject = { ...project, brandConfig: { primary_color: brandColor } };
+      await api.updateProject(projectId, { brandConfig: { primary_color: brandColor, secondary_color: brandSecondary, accent_color: brandAccent } });
+      const updatedProject = { ...project, brandConfig: { primary_color: brandColor, secondary_color: brandSecondary, accent_color: brandAccent } };
       // Also update the storyboard brand color if storyboard exists
       if (project.storyboard?.brand) {
         const updatedStoryboard = {
           ...project.storyboard,
-          brand: { ...project.storyboard.brand, primary_color: brandColor },
+          brand: { ...project.storyboard.brand, primary_color: brandColor, secondary_color: brandSecondary, accent_color: brandAccent },
         };
         await api.updateStoryboard(projectId, updatedStoryboard);
         updatedProject.storyboard = updatedStoryboard;
@@ -352,25 +356,73 @@ export default function ProjectPage() {
               </div>
             )}
 
-            {/* Brand color */}
-            <div className="bg-dark-800 rounded-xl p-4 border border-dark-700 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <label className="text-xs text-gray-500">Couleur brand :</label>
-                <input
-                  type="color"
-                  value={brandColor}
-                  onChange={(e) => setBrandColor(e.target.value)}
-                  className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
-                />
-                <span className="text-sm font-mono text-gray-300">{brandColor}</span>
+            {/* Brand palette */}
+            <div className="bg-dark-800 rounded-xl p-4 border border-dark-700 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Palette de couleurs</span>
+                <button
+                  onClick={handleSaveBrand}
+                  disabled={savingBrand}
+                  className="text-xs bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg"
+                >
+                  {savingBrand ? "..." : "Sauvegarder"}
+                </button>
               </div>
-              <button
-                onClick={handleSaveBrand}
-                disabled={savingBrand}
-                className="text-xs text-brand-400 hover:text-brand-300 disabled:opacity-50"
-              >
-                {savingBrand ? "..." : "Sauvegarder"}
-              </button>
+
+              {/* Preset palettes */}
+              <div>
+                <p className="text-xs text-gray-500 mb-2">Presets :</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { name: "Sunset", p: "#FF6B35", s: "#CC3300", a: "#FFB347" },
+                    { name: "Ocean", p: "#0066CC", s: "#004499", a: "#00AAFF" },
+                    { name: "Violet", p: "#6C63FF", s: "#3D37B5", a: "#C77DFF" },
+                    { name: "Forest", p: "#2D6A4F", s: "#1B4332", a: "#95D5B2" },
+                    { name: "Rose", p: "#E91E63", s: "#880E4F", a: "#FF80AB" },
+                    { name: "Gold", p: "#F59E0B", s: "#B45309", a: "#FDE68A" },
+                    { name: "Noir", p: "#1F2937", s: "#111827", a: "#6B7280" },
+                  ].map((preset) => (
+                    <button
+                      key={preset.name}
+                      onClick={() => { setBrandColor(preset.p); setBrandSecondary(preset.s); setBrandAccent(preset.a); }}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dark-600 hover:border-dark-500 text-xs text-gray-300 hover:text-white transition-colors"
+                    >
+                      <span className="flex gap-0.5">
+                        <span style={{ background: preset.p }} className="w-3 h-3 rounded-full inline-block" />
+                        <span style={{ background: preset.s }} className="w-3 h-3 rounded-full inline-block" />
+                        <span style={{ background: preset.a }} className="w-3 h-3 rounded-full inline-block" />
+                      </span>
+                      {preset.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Manual pickers */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Primaire", value: brandColor, setter: setBrandColor },
+                  { label: "Secondaire", value: brandSecondary, setter: setBrandSecondary },
+                  { label: "Accent", value: brandAccent, setter: setBrandAccent },
+                ].map(({ label, value, setter }) => (
+                  <div key={label} className="flex flex-col items-center gap-1.5">
+                    <input
+                      type="color"
+                      value={value}
+                      onChange={(e) => setter(e.target.value)}
+                      className="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-0 p-0"
+                    />
+                    <span className="text-xs text-gray-500">{label}</span>
+                    <span className="text-xs font-mono text-gray-400">{value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Live preview strip */}
+              <div
+                className="h-8 rounded-lg"
+                style={{ background: `linear-gradient(135deg, ${brandColor} 0%, ${brandSecondary} 50%, ${brandAccent} 100%)` }}
+              />
             </div>
             <button
               onClick={handleGenerateStoryboard}

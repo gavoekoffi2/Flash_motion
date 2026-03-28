@@ -16,7 +16,7 @@ export interface Storyboard {
   project_title: string;
   aspect_ratio: string;
   scenes: StoryboardScene[];
-  brand: { primary_color: string; logo_id: string | null };
+  brand: { primary_color: string; secondary_color?: string; accent_color?: string; logo_id: string | null };
   caption_short: string;
 }
 
@@ -31,18 +31,21 @@ Rules:
 - Keep total duration between 15–60 seconds.
 - Include a caption_short (≤ 280 chars) for social sharing.
 - brand.primary_color should be extracted or inferred from context.
+- Generate secondary_color (30-50% darker than primary) and accent_color (bright complementary tint). All must be valid hex codes.
+- For feature_list scenes, separate individual items with " • " (bullet point).
 
 JSON schema:
 {
   "project_title": string,
   "aspect_ratio": "9:16" | "16:9" | "1:1",
   "scenes": [{ "id": number, "duration_s": number, "type": string, "text": string, "assets": [{"type":"image"|"logo","id":string,"placement":"center"|"left"|"right"|"background","scale":"cover"|"contain"|"fill"}], "animation": string, "audio_clip": string|null, "tts_instruction": string|null }],
-  "brand": { "primary_color": string, "logo_id": string|null },
+  "brand": { "primary_color": string, "secondary_color": string, "accent_color": string, "logo_id": string|null },
   "caption_short": string
 }`;
 
 const TEMPLATE_HINTS: Record<string, string> = {
   HeroPromo: "hero+feature_list+outro: strong product headline, key benefits, CTA",
+  CinematicPromo: "hero+feature_list(3-4 items joined by bullet)+outro: cinematic premium, floating orbs, kinetic typography",
   Testimonial: "hero+feature_list(customer quotes with names)+outro: social proof focus",
   EcommerceShowcase: "hero+carousel(product names/prices)+feature_list(benefits)+outro",
   Educational: "hero(intro)+feature_list(numbered steps)+demo(walkthrough)+outro: step-by-step",

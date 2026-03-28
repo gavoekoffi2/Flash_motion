@@ -2,6 +2,7 @@ import { registerRoot } from "remotion";
 import { Composition } from "remotion";
 import React from "react";
 import { HeroPromo, HeroPromoProps } from "../templates/HeroPromo";
+import { CinematicPromo } from "../templates/CinematicPromo";
 import { Carousel } from "../templates/Carousel";
 import { FeatureList } from "../templates/FeatureList";
 import { Demo } from "../templates/Demo";
@@ -33,6 +34,16 @@ const defaultMultiProps = {
   assetUrls: {},
 };
 
+const defaultCinematicProps = {
+  scenes: [
+    { id: 1, duration_s: 5, type: "hero", text: "Découvrez quelque chose d'extraordinaire.", assets: [], animation: "fade_in_up" },
+    { id: 2, duration_s: 4, type: "feature_list", text: "Performance • Design élégant • Résultats prouvés", assets: [], animation: "slide_left" },
+    { id: 3, duration_s: 4, type: "outro", text: "Commencez aujourd'hui.", assets: [], animation: "zoom_in" },
+  ],
+  brand: { primary_color: "#6C63FF", secondary_color: "#3D37B5", accent_color: "#C77DFF", logo_id: null },
+  assetUrls: {},
+};
+
 const totalDuration = defaultProps.scenes.reduce((sum: number, s: any) => sum + s.duration_s, 0);
 const totalMultiDuration = defaultMultiProps.scenes.reduce((sum: number, s: any) => sum + s.duration_s, 0);
 
@@ -60,6 +71,7 @@ export const RemotionRoot: React.FC = () => {
       {makeCompositions("Testimonial", Testimonial as unknown as AnyComp, defaultMultiProps, totalMultiDuration)}
       {makeCompositions("Educational", Educational as unknown as AnyComp, defaultMultiProps, totalMultiDuration)}
       {makeCompositions("SaasLaunch", SaasLaunch as unknown as AnyComp, defaultMultiProps, totalMultiDuration)}
+      {makeCompositions("CinematicPromo", CinematicPromo as unknown as AnyComp, defaultCinematicProps, defaultCinematicProps.scenes.reduce((s, sc) => s + sc.duration_s, 0))}
     </>
   );
 };

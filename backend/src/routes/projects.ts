@@ -13,7 +13,7 @@ router.use(authMiddleware);
 
 // ── Validation schemas ──
 
-const VALID_TEMPLATES = ["HeroPromo", "Testimonial", "EcommerceShowcase", "Educational", "SaasLaunch"] as const;
+const VALID_TEMPLATES = ["HeroPromo", "Testimonial", "EcommerceShowcase", "Educational", "SaasLaunch", "CinematicPromo"] as const;
 
 const createProjectSchema = z.object({
   title: z.string().min(1).max(200),
@@ -22,6 +22,8 @@ const createProjectSchema = z.object({
   template: z.enum(VALID_TEMPLATES).default("HeroPromo"),
   brandConfig: z.object({
     primary_color: z.string().optional(),
+    secondary_color: z.string().optional(),
+    accent_color: z.string().optional(),
     logo_id: z.string().optional(),
   }).optional(),
 });
