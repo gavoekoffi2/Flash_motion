@@ -8,6 +8,7 @@ import { useToast } from "@/components/Toast";
 import AssetUploader from "@/components/AssetUploader";
 import AssetManager from "@/components/AssetManager";
 import StoryboardEditor from "@/components/StoryboardEditor";
+import VideoPreview from "@/components/VideoPreview";
 
 type Tab = "script" | "assets" | "storyboard" | "render";
 
@@ -28,6 +29,7 @@ export default function ProjectPage() {
   const [editingScript, setEditingScript] = useState(false);
   const [scriptDraft, setScriptDraft] = useState("");
   const [savingScript, setSavingScript] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => { checkAuth(); }, [checkAuth]);
   useEffect(() => { if (!loading && !user) router.push("/login"); }, [user, loading, router]);
@@ -284,14 +286,30 @@ export default function ProjectPage() {
 
         {/* Storyboard Tab */}
         {tab === "storyboard" && (
-          <div className="animate-fade-in">
+          <div className="animate-fade-in space-y-4">
             {project.storyboard ? (
-              <StoryboardEditor
-                storyboard={project.storyboard}
-                assets={assets}
-                onSave={handleSaveStoryboard}
-                saving={savingStoryboard}
-              />
+              <>
+                {/* Preview toggle */}
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setShowPreview(!showPreview)}
+                    className="text-sm text-brand-400 hover:text-brand-300 flex items-center gap-1.5"
+                  >
+                    {showPreview ? "▲ Masquer l'aperçu" : "▼ Aperçu scène par scène"}
+                  </button>
+                </div>
+                {showPreview && (
+                  <div className="bg-dark-800 border border-dark-700 rounded-xl p-4">
+                    <VideoPreview storyboard={project.storyboard} />
+                  </div>
+                )}
+                <StoryboardEditor
+                  storyboard={project.storyboard}
+                  assets={assets}
+                  onSave={handleSaveStoryboard}
+                  saving={savingStoryboard}
+                />
+              </>
             ) : (
               <div className="text-center py-16">
                 <p className="text-gray-400 mb-4">Aucun storyboard généré</p>
