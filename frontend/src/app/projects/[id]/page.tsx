@@ -224,7 +224,7 @@ export default function ProjectPage() {
 
   const renderProgress = renderJob ? {
     QUEUED: { pct: 10, label: "En file d'attente...", color: "bg-blue-500" },
-    RENDERING: { pct: 50, label: "Rendu vidéo en cours...", color: "bg-yellow-500" },
+    RENDERING: { pct: renderJob.progress || 15, label: `Rendu en cours... ${renderJob.progress || 0}%`, color: "bg-yellow-500" },
     UPLOADING: { pct: 85, label: "Upload de la vidéo...", color: "bg-brand-500" },
     DONE: { pct: 100, label: "Terminé !", color: "bg-green-500" },
     FAILED: { pct: 100, label: "Échoué", color: "bg-red-500" },

@@ -1,0 +1,133 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: flashmotion
+      POSTGRES_PASSWORD: flashmotion_secure_2026
+      POSTGRES_DB: flashmotion
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flashmotion"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: /opt/flash-motion/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://flashmotion:flashmotion_secure_2026@postgres:5432/flashmotion
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin123
+      S3_BUCKET: flash-motion
+      S3_REGION: us-east-1
+      S3_PUBLIC_ENDPOINT: http://76.13.129.252:9000
+      JWT_SECRET: flash_motion_jwt_secret_2026_secure
+      JWT_EXPIRES_IN: 7d
+      FRONTEND_URL: https://flash-motion.vercel.app,https://flashmotion.netlify.app,https://flash-motion-projobcopilotes-projects.vercel.app,https://flash-motion-git-main-projobcopilotes-projects.vercel.app,http://localhost:3000
+      APP_URL: https://flash-motion-projobcopilotes-projects.vercel.app
+      LLM_MODE: openrouter
+      OPENROUTER_API_KEY: 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
+      OPENROUTER_MODEL: openai/gpt-4o-mini
+      OLLAMA_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: mistral
+      TTS_ENGINE: none
+      MAX_CONCURRENT_RENDERS: "1"
+      RENDER_TIMEOUT_MS: "300000"
+      TEMP_DIR: /tmp/flash-motion
+      MAX_FILE_SIZE_MB: "8"
+      MAX_ASSETS_PER_PROJECT: "20"
+      RETENTION_DAYS: "30"
+    ports:
+      - "3001:3001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.flashmotion-api.rule=Host(`api.finablasolution.cloud`)"
+      - "traefik.http.routers.flashmotion-api.entrypoints=websecure"
+      - "traefik.http.routers.flashmotion-api.tls=true"
+      - "traefik.http.routers.flashmotion-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.flashmotion-api.loadbalancer.server.port=3001"
+      - "traefik.http.middlewares.flashmotion-cors.headers.accesscontrolalloworiginlist=https://flashmotion.netlify.app,http://localhost:3000,https://frontend-phi-three-23.vercel.app,https://flash-motion-projobcopilotes-projects.vercel.app,https://flash-motion-git-main-projobcopilotes-projects.vercel.app"
+      - "traefik.http.middlewares.flashmotion-cors.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS"
+      - "traefik.http.middlewares.flashmotion-cors.headers.accesscontrolallowheaders=Content-Type,Authorization"
+      - "traefik.http.middlewares.flashmotion-cors.headers.accesscontrolallowcredentials=true"
+      - "traefik.http.routers.flashmotion-api.middlewares=flashmotion-cors"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  worker:
+    image: node:20-slim
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "apt-get update -qq && apt-get install -y -qq openssl libnspr4 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libgbm1 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libxkbcommon0 libasound2 libpango-1.0-0 libpangocairo-1.0-0 libcairo2 libx11-6 libxext6 libxrender1 libglib2.0-0 && npm install --include=dev && npx prisma generate && npx tsc && node dist/worker.js"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://flashmotion:flashmotion_secure_2026@postgres:5432/flashmotion
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin123
+      S3_BUCKET: flash-motion
+      S3_REGION: us-east-1
+      MAX_CONCURRENT_RENDERS: "1"
+      RENDER_TIMEOUT_MS: "300000"
+      TEMP_DIR: /tmp/flash-motion
+    volumes:
+      - /opt/flash-motion/workers/remotion-worker:/app
+      - worker-temp:/tmp/flash-motion
+    depends_on:
+      - redis
+      - minio
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+  worker-temp:

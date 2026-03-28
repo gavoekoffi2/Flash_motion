@@ -24,7 +24,7 @@ const S3_BUCKET = process.env.S3_BUCKET || "flash-motion";
 const S3_REGION = process.env.S3_REGION || "us-east-1";
 const TEMP_DIR = process.env.TEMP_DIR || "/tmp/flash-motion";
 const S3_PUBLIC_ENDPOINT = process.env.S3_PUBLIC_ENDPOINT || S3_ENDPOINT;
-const TTS_ENABLED = process.env.TTS_ENABLED !== "false"; // enabled by default
+const TTS_ENABLED = process.env.TTS_ENABLED === "true"; // disabled by default (msedge-tts unreliable)
 const TTS_LANG = process.env.TTS_LANG || "fr";
 const MAX_CONCURRENT = parseInt(process.env.MAX_CONCURRENT_RENDERS || "1", 10);
 const RENDER_TIMEOUT_MS = parseInt(process.env.RENDER_TIMEOUT_MS || "300000", 10);
@@ -168,7 +168,7 @@ async function processRender(job: Job<RenderJobData>) {
       (sum: number, s: any) => sum + (s.duration_s || 3),
       0,
     );
-    const fps = 30;
+    const fps = 24; // 24fps is sufficient and 20% faster than 30fps
     const compositionId = getCompositionId(template || "HeroPromo", storyboard.aspect_ratio);
 
     // 4. Select composition
@@ -201,6 +201,10 @@ async function processRender(job: Job<RenderJobData>) {
           audioUrls,
         },
         onProgress: ({ progress }) => {
+          const pctVal = Math.round(progress * 100);
+          if (pctVal % 10 === 0) {
+            prisma.renderJob.update({ where: { id: jobId }, data: { progress: pctVal } }).catch(() => {});
+          }
           const pct = Math.round(progress * 100);
           if (pct % 10 === 0) {
             console.log(`[Worker] Render progress: ${pct}%`);
@@ -301,3 +305,14 @@ async function shutdown(signal: string) {
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
+
+// ── Pre-warm bundle on startup ──
+(async () => {
+  try {
+    console.log("[Worker] Pre-warming Remotion bundle on startup...");
+    await getBundleLocation();
+    console.log("[Worker] Bundle pre-warm complete — ready for fast renders");
+  } catch (err) {
+    console.warn("[Worker] Bundle pre-warm failed (non-fatal):", (err as Error).message);
+  }
+})();

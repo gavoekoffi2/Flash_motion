@@ -12,7 +12,8 @@ import { Testimonial } from "../templates/Testimonial";
 import { Educational } from "../templates/Educational";
 import { SaasLaunch } from "../templates/SaasLaunch";
 
-const FPS = 30;
+// Reduced from 30fps/1080p to 24fps/720p for faster rendering on VPS
+const FPS = 24;
 
 const defaultProps: HeroPromoProps = {
   scenes: [
@@ -52,9 +53,9 @@ type AnyComp = React.ComponentType<Record<string, unknown>>;
 function makeCompositions(id: string, component: AnyComp, props: object, duration: number) {
   return (
     <>
-      <Composition id={id} component={component} durationInFrames={duration * FPS} fps={FPS} width={1080} height={1920} defaultProps={props} />
-      <Composition id={id + "-16x9"} component={component} durationInFrames={duration * FPS} fps={FPS} width={1920} height={1080} defaultProps={props} />
-      <Composition id={id + "-1x1"} component={component} durationInFrames={duration * FPS} fps={FPS} width={1080} height={1080} defaultProps={props} />
+      <Composition id={id} component={component} durationInFrames={duration * FPS} fps={FPS} width={720} height={1280} defaultProps={props} />
+      <Composition id={id + "-16x9"} component={component} durationInFrames={duration * FPS} fps={FPS} width={1280} height={720} defaultProps={props} />
+      <Composition id={id + "-1x1"} component={component} durationInFrames={duration * FPS} fps={FPS} width={720} height={720} defaultProps={props} />
     </>
   );
 }
