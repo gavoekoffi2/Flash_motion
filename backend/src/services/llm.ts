@@ -49,13 +49,20 @@ const TEMPLATE_HINTS: Record<string, string> = {
   SaasLaunch: "hero(tagline)+demo(key feature)+feature_list(benefits)+outro: tech/startup tone",
 };
 
-function buildUserPrompt(script: string, assetIds: { id: string; type: string; filename: string }[], aspectRatio: string, template = "HeroPromo"): string {
+function buildUserPrompt(script: string, assetIds: { id: string; type: string; filename: string }[], aspectRatio: string, template = "HeroPromo", brandColor?: string): string {
   const assetList = assetIds.length > 0
     ? `\nUploaded assets:\n${assetIds.map(a => `- ${a.id} (${a.type}): ${a.filename}`).join("\n")}`
     : "\nNo custom assets uploaded — use placeholder references.";
 
   const hint = TEMPLATE_HINTS[template] || TEMPLATE_HINTS.HeroPromo;
-  return `Script:\n"""${script}"""\n\nAspect ratio: ${aspectRatio}\nTemplate: ${template} — ${hint}${assetList}\n\nProduce the storyboard JSON now.`;
+  const brandHint = brandColor ? `\nBrand primary color: ${brandColor} (use as brand.primary_color in JSON)` : "";
+  return `Script:
+"""${script}"""
+
+Aspect ratio: ${aspectRatio}
+Template: ${template} — ${hint}${brandHint}${assetList}
+
+Produce the storyboard JSON now.`;
 }
 
 // ── OpenRouter call ──
@@ -141,10 +148,11 @@ export async function generateStoryboard(
   assets: { id: string; type: string; filename: string }[],
   aspectRatio: string,
   template = "HeroPromo",
+  brandColor?: string,
 ): Promise<Storyboard> {
   const messages = [
     { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: buildUserPrompt(script, assets, aspectRatio, template) },
+    { role: "user", content: buildUserPrompt(script, assets, aspectRatio, template, brandColor) },
   ];
 
   const raw = await callLLM(messages);

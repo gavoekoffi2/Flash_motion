@@ -256,11 +256,13 @@ router.post("/:id/generate-storyboard", async (req: Request, res: Response) => {
       filename: a.filename,
     }));
 
+    const brandConfig = project.brandConfig as any;
     const storyboard = await generateStoryboard(
       project.script,
       assetList,
       project.aspectRatio,
       project.template || "HeroPromo",
+      brandConfig?.primary_color,
     );
 
     await prisma.$transaction([

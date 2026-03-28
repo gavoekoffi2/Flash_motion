@@ -177,8 +177,17 @@ export default function ProjectPage() {
     setSavingBrand(true);
     try {
       await api.updateProject(projectId, { brandConfig: { primary_color: brandColor } });
-      setProject({ ...project, brandConfig: { primary_color: brandColor } });
-      setSavingBrand(false);
+      const updatedProject = { ...project, brandConfig: { primary_color: brandColor } };
+      // Also update the storyboard brand color if storyboard exists
+      if (project.storyboard?.brand) {
+        const updatedStoryboard = {
+          ...project.storyboard,
+          brand: { ...project.storyboard.brand, primary_color: brandColor },
+        };
+        await api.updateStoryboard(projectId, updatedStoryboard);
+        updatedProject.storyboard = updatedStoryboard;
+      }
+      setProject(updatedProject);
       toast("Couleur brand sauvegardée", "success");
     } catch (err: any) {
       toast(err.message, "error");
