@@ -30,6 +30,8 @@ export type ProjectStatus = "DRAFT" | "STORYBOARD_READY" | "RENDERING" | "DONE" 
 
 export interface BrandConfig {
   primary_color?: string;
+  secondary_color?: string;
+  accent_color?: string;
   logo_id?: string | null;
 }
 
@@ -67,7 +69,7 @@ export interface Storyboard {
   project_title: string;
   aspect_ratio: "9:16" | "16:9" | "1:1";
   scenes: StoryboardScene[];
-  brand: { primary_color: string; logo_id: string | null };
+  brand: { primary_color: string; secondary_color?: string; accent_color?: string; logo_id: string | null };
   caption_short?: string;
 }
 
