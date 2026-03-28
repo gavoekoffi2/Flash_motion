@@ -36,6 +36,8 @@ export default function ProjectPage() {
   const [editingTemplate, setEditingTemplate] = useState(false);
   const [templateDraft, setTemplateDraft] = useState("");
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [brandColor, setBrandColor] = useState("#FF6B35");
+  const [savingBrand, setSavingBrand] = useState(false);
 
   useEffect(() => { checkAuth(); }, [checkAuth]);
   useEffect(() => { if (!loading && !user) router.push("/login"); }, [user, loading, router]);
@@ -44,6 +46,7 @@ export default function ProjectPage() {
     try {
       const { project: p } = await api.getProject(projectId);
       setProject(p);
+      if (p.brandConfig?.primary_color) setBrandColor(p.brandConfig.primary_color);
       if (p.renderJobs && p.renderJobs.length > 0) setRenderJob(p.renderJobs[0]);
     } catch (err: any) {
       toast(err.message, "error");
@@ -167,6 +170,20 @@ export default function ProjectPage() {
       toast(err.message, "error");
     } finally {
       setSavingTemplate(false);
+    }
+  }
+
+  async function handleSaveBrand() {
+    setSavingBrand(true);
+    try {
+      await api.updateProject(projectId, { brandConfig: { primary_color: brandColor } });
+      setProject({ ...project, brandConfig: { primary_color: brandColor } });
+      setSavingBrand(false);
+      toast("Couleur brand sauvegardée", "success");
+    } catch (err: any) {
+      toast(err.message, "error");
+    } finally {
+      setSavingBrand(false);
     }
   }
 
@@ -326,6 +343,26 @@ export default function ProjectPage() {
               </div>
             )}
 
+            {/* Brand color */}
+            <div className="bg-dark-800 rounded-xl p-4 border border-dark-700 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <label className="text-xs text-gray-500">Couleur brand :</label>
+                <input
+                  type="color"
+                  value={brandColor}
+                  onChange={(e) => setBrandColor(e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
+                />
+                <span className="text-sm font-mono text-gray-300">{brandColor}</span>
+              </div>
+              <button
+                onClick={handleSaveBrand}
+                disabled={savingBrand}
+                className="text-xs text-brand-400 hover:text-brand-300 disabled:opacity-50"
+              >
+                {savingBrand ? "..." : "Sauvegarder"}
+              </button>
+            </div>
             <button
               onClick={handleGenerateStoryboard}
               disabled={generating}
