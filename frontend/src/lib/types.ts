@@ -15,6 +15,7 @@ export interface Project {
   title: string;
   script: string;
   aspectRatio: "9:16" | "16:9" | "1:1";
+  template: string;
   status: ProjectStatus;
   storyboard: Storyboard | null;
   brandConfig: BrandConfig | null;

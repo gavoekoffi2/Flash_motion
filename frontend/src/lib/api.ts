@@ -120,7 +120,7 @@ class ApiClient {
     });
   }
 
-  async updateProject(id: string, data: Partial<Pick<Project, "title" | "script" | "aspectRatio" | "brandConfig">>) {
+  async updateProject(id: string, data: Partial<Pick<Project, "title" | "script" | "aspectRatio" | "template" | "brandConfig">>) {
     return this.request<{ project: Project }>(`/projects/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify(data),

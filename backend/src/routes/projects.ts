@@ -30,6 +30,7 @@ const updateProjectSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   script: z.string().min(10).max(10000).optional(),
   aspectRatio: z.enum(["9:16", "16:9", "1:1"]).optional(),
+  template: z.enum(["HeroPromo", "Testimonial", "EcommerceShowcase", "Educational", "SaasLaunch"]).optional(),
   brandConfig: z.object({
     primary_color: z.string().optional(),
     logo_id: z.string().optional(),
