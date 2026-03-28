@@ -22,7 +22,6 @@ const ACCEPTED = {
 
 interface UploadProgress {
   fileName: string;
-  progress: number;
   status: "pending" | "uploading" | "success" | "error";
   error?: string;
 }
@@ -38,66 +37,55 @@ export default function AssetUploader({ projectId, onUploaded }: Props) {
 
       setError("");
       setUploading(true);
+      setUploadProgress(files.map((f) => ({ fileName: f.name, status: "pending" })));
 
-      // Initialize progress tracking
-      const initialProgress: UploadProgress[] = files.map((f) => ({
-        fileName: f.name,
-        progress: 0,
-        status: "pending",
-      }));
-      setUploadProgress(initialProgress);
+      let successCount = 0;
 
-      try {
-        // Upload files with progress tracking
-        const uploadPromises = files.map(async (file, index) => {
-          try {
-            setUploadProgress((prev) => {
-              const updated = [...prev];
-              updated[index] = { ...updated[index], status: "uploading", progress: 0 };
-              return updated;
-            });
-
-            await api.uploadAssets(projectId, [file]);
-
-            setUploadProgress((prev) => {
-              const updated = [...prev];
-              updated[index] = { ...updated[index], status: "success", progress: 100 };
-              return updated;
-            });
-          } catch (err: any) {
-            setUploadProgress((prev) => {
-              const updated = [...prev];
-              updated[index] = {
-                ...updated[index],
-                status: "error",
-                error: err.message || "Erreur lors de l'upload",
-              };
-              return updated;
-            });
-          }
+      // Upload files one at a time to track per-file status
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgress((prev) => {
+          const updated = [...prev];
+          updated[i] = { ...updated[i], status: "uploading" };
+          return updated;
         });
 
-        await Promise.all(uploadPromises);
-
-        // Check if all uploads were successful
-        const allSuccessful = uploadProgress.every((p) => p.status === "success");
-        if (allSuccessful) {
-          onUploaded();
-          setUploadProgress([]);
+        try {
+          await api.uploadAssets(projectId, [file]);
+          successCount++;
+          setUploadProgress((prev) => {
+            const updated = [...prev];
+            updated[i] = { ...updated[i], status: "success" };
+            return updated;
+          });
+        } catch (err: any) {
+          setUploadProgress((prev) => {
+            const updated = [...prev];
+            updated[i] = {
+              ...updated[i],
+              status: "error",
+              error: err.message || "Erreur lors de l'upload",
+            };
+            return updated;
+          });
         }
-      } catch (err: any) {
-        setError(err.message || "Erreur lors de l'upload des fichiers");
-      } finally {
-        setUploading(false);
+      }
+
+      setUploading(false);
+
+      // Notify parent if at least one file uploaded successfully
+      if (successCount > 0) {
+        onUploaded();
+        setTimeout(() => setUploadProgress([]), 2000);
       }
     },
-    [projectId, onUploaded, uploadProgress]
+    [projectId, onUploaded],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: ACCEPTED,
-    maxSize: 8 * 1024 * 1024, // 8 MB
+    maxSize: 8 * 1024 * 1024,
     maxFiles: 10,
     disabled: uploading,
   });
@@ -134,9 +122,7 @@ export default function AssetUploader({ projectId, onUploaded }: Props) {
               <p className="text-gray-300 font-medium mb-1">
                 Glissez-déposez vos fichiers ici
               </p>
-              <p className="text-xs text-gray-500 mb-3">
-                ou cliquez pour sélectionner
-              </p>
+              <p className="text-xs text-gray-500 mb-3">ou cliquez pour sélectionner</p>
             </div>
             <p className="text-xs text-gray-600 border-t border-dark-700 pt-3">
               Images (PNG, JPG, WebP, SVG) • Audio (MP3, WAV) • Fonts (WOFF, TTF)
@@ -151,43 +137,29 @@ export default function AssetUploader({ projectId, onUploaded }: Props) {
       {uploadProgress.length > 0 && (
         <div className="space-y-2 bg-dark-900 rounded-lg p-4 border border-dark-700">
           {uploadProgress.map((item, idx) => (
-            <div key={idx} className="space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-300 truncate">{item.fileName}</span>
-                <span
-                  className={`text-xs font-medium ${
-                    item.status === "success"
-                      ? "text-green-400"
-                      : item.status === "error"
+            <div key={idx} className="flex items-center justify-between text-sm">
+              <span className="text-gray-300 truncate flex-1 mr-3">{item.fileName}</span>
+              <span
+                className={`text-xs font-medium shrink-0 ${
+                  item.status === "success"
+                    ? "text-green-400"
+                    : item.status === "error"
                       ? "text-red-400"
                       : item.status === "uploading"
-                      ? "text-brand-400"
-                      : "text-gray-500"
-                  }`}
-                >
-                  {item.status === "success"
-                    ? "✓ Complété"
-                    : item.status === "error"
+                        ? "text-brand-400"
+                        : "text-gray-500"
+                }`}
+              >
+                {item.status === "success"
+                  ? "✓ OK"
+                  : item.status === "error"
                     ? "✗ Erreur"
                     : item.status === "uploading"
-                    ? `${item.progress}%`
-                    : "En attente"}
-                </span>
-              </div>
-              <div className="w-full bg-dark-800 rounded-full h-1.5 overflow-hidden">
-                <div
-                  className={`h-full transition-all ${
-                    item.status === "success"
-                      ? "bg-green-500"
-                      : item.status === "error"
-                      ? "bg-red-500"
-                      : "bg-brand-500"
-                  }`}
-                  style={{ width: `${item.progress}%` }}
-                />
-              </div>
+                      ? "En cours..."
+                      : "En attente"}
+              </span>
               {item.error && (
-                <p className="text-xs text-red-400">{item.error}</p>
+                <p className="text-xs text-red-400 w-full mt-1">{item.error}</p>
               )}
             </div>
           ))}
