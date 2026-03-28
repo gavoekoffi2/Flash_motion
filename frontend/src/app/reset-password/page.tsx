@@ -43,7 +43,7 @@ function ResetPasswordForm() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-brand-500 mb-2">Flash Motion</h1>
+          <Link href="/" className="text-2xl font-bold text-brand-500 hover:text-brand-400 transition-colors mb-2 inline-block">Flash Motion</Link>
           <p className="text-gray-400">Nouveau mot de passe</p>
         </div>
 
