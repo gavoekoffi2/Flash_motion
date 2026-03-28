@@ -84,7 +84,7 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="border-b border-dark-700 bg-dark-900/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-brand-500">Flash Motion</h1>
+          <Link href="/" className="text-xl font-bold text-brand-500 hover:text-brand-400 transition-colors">Flash Motion</Link>
           <div className="flex items-center gap-4">
             <Link href="/settings" className="text-sm text-gray-400 hover:text-white transition-colors">
               Paramètres

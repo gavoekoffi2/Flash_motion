@@ -31,7 +31,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-brand-500">Flash Motion</h1>
+          <Link href="/" className="text-3xl font-bold text-brand-500 hover:text-brand-400 transition-colors">Flash Motion</Link>
           <p className="text-gray-400 mt-2">Texte &rarr; Vidéo Motion Design</p>
         </div>
 
