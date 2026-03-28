@@ -126,7 +126,19 @@ router.get("/:id", async (req: Request, res: Response) => {
       },
     });
     if (!project) return res.status(404).json({ error: "Project not found" });
-    return res.json({ project });
+
+    // Generate presigned download URLs for DONE render jobs
+    const renderJobs = await Promise.all(
+      project.renderJobs.map(async (job) => {
+        if (job.status === "DONE" && job.outputKey) {
+          const downloadUrl = await getSignedDownloadUrl(job.outputKey).catch(() => null);
+          return { ...job, downloadUrl };
+        }
+        return { ...job, downloadUrl: null };
+      }),
+    );
+
+    return res.json({ project: { ...project, renderJobs } });
   } catch (err) {
     console.error("[Projects] Get error:", err);
     return res.status(500).json({ error: "Internal server error" });
