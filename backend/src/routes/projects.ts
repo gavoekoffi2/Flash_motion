@@ -148,7 +148,7 @@ router.put("/:id", async (req: Request, res: Response) => {
         title: data.title ?? project.title,
         script: data.script ?? project.script,
         aspectRatio: data.aspectRatio ?? project.aspectRatio,
-        brandConfig: data.brandConfig !== undefined ? data.brandConfig : project.brandConfig,
+        brandConfig: data.brandConfig !== undefined ? (data.brandConfig as any) : project.brandConfig,
       },
     });
     return res.json({ project: updated });
@@ -404,6 +404,7 @@ router.post("/:id/render", async (req: Request, res: Response) => {
         s3Key: a.s3Key,
       })),
       outputKey: renderJob.outputKey!,
+      template: project.template || "HeroPromo",
     };
 
     await enqueueRender(jobData);
