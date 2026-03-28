@@ -41,12 +41,21 @@ JSON schema:
   "caption_short": string
 }`;
 
-function buildUserPrompt(script: string, assetIds: { id: string; type: string; filename: string }[], aspectRatio: string): string {
+const TEMPLATE_HINTS: Record<string, string> = {
+  HeroPromo: "hero+feature_list+outro: strong product headline, key benefits, CTA",
+  Testimonial: "hero+feature_list(customer quotes with names)+outro: social proof focus",
+  EcommerceShowcase: "hero+carousel(product names/prices)+feature_list(benefits)+outro",
+  Educational: "hero(intro)+feature_list(numbered steps)+demo(walkthrough)+outro: step-by-step",
+  SaasLaunch: "hero(tagline)+demo(key feature)+feature_list(benefits)+outro: tech/startup tone",
+};
+
+function buildUserPrompt(script: string, assetIds: { id: string; type: string; filename: string }[], aspectRatio: string, template = "HeroPromo"): string {
   const assetList = assetIds.length > 0
     ? `\nUploaded assets:\n${assetIds.map(a => `- ${a.id} (${a.type}): ${a.filename}`).join("\n")}`
     : "\nNo custom assets uploaded — use placeholder references.";
 
-  return `Script:\n"""${script}"""\n\nAspect ratio: ${aspectRatio}${assetList}\n\nProduce the storyboard JSON now.`;
+  const hint = TEMPLATE_HINTS[template] || TEMPLATE_HINTS.HeroPromo;
+  return `Script:\n"""${script}"""\n\nAspect ratio: ${aspectRatio}\nTemplate: ${template} — ${hint}${assetList}\n\nProduce the storyboard JSON now.`;
 }
 
 // ── OpenRouter call ──
@@ -72,7 +81,7 @@ async function callOpenRouter(messages: { role: string; content: string }[]): Pr
     throw new Error(`OpenRouter error ${res.status}: ${body}`);
   }
 
-  const data = await res.json();
+  const data = await res.json() as any;
   return data.choices[0].message.content;
 }
 
@@ -94,7 +103,7 @@ async function callOllama(messages: { role: string; content: string }[]): Promis
     throw new Error(`Ollama error ${res.status}: ${body}`);
   }
 
-  const data = await res.json();
+  const data = await res.json() as any;
   return data.message.content;
 }
 
@@ -131,10 +140,11 @@ export async function generateStoryboard(
   script: string,
   assets: { id: string; type: string; filename: string }[],
   aspectRatio: string,
+  template = "HeroPromo",
 ): Promise<Storyboard> {
   const messages = [
     { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: buildUserPrompt(script, assets, aspectRatio) },
+    { role: "user", content: buildUserPrompt(script, assets, aspectRatio, template) },
   ];
 
   const raw = await callLLM(messages);
