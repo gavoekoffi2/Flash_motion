@@ -58,6 +58,15 @@ export default function ProjectPage() {
     }
   }, [user, loadProject, loadAssets]);
 
+  // When project loads with a DONE render job but no downloadUrl, fetch it once
+  useEffect(() => {
+    if (renderJob && renderJob.status === "DONE" && !renderJob.downloadUrl) {
+      api.getRenderStatus(projectId, renderJob.id)
+        .then(({ renderJob: updated }) => setRenderJob(updated))
+        .catch(console.error);
+    }
+  }, [renderJob?.id, renderJob?.status, renderJob?.downloadUrl, projectId]);
+
   // Poll render status
   useEffect(() => {
     if (!renderJob || renderJob.status === "DONE" || renderJob.status === "FAILED") return;
