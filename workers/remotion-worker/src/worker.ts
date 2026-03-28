@@ -58,6 +58,7 @@ interface RenderJobData {
   };
   assets: { id: string; type: string; s3Key: string }[];
   outputKey: string;
+  template: string;
 }
 
 // ── Get signed URLs for assets ──
@@ -80,21 +81,11 @@ async function resolveAssetUrls(assets: RenderJobData["assets"]): Promise<Record
 }
 
 // ── Determine composition based on aspect ratio and scene type ──
-function getCompositionId(aspectRatio: string, sceneType?: string): string {
+function getCompositionId(template: string, aspectRatio: string): string {
   const aspectSuffix = aspectRatio === "16:9" ? "-16x9" : aspectRatio === "1:1" ? "-1x1" : "";
-  
-  // Determine template based on first scene type
-  const templateName = sceneType || "HeroPromo";
-  const templateMap: Record<string, string> = {
-    "hero": "HeroPromo",
-    "carousel": "Carousel",
-    "feature_list": "FeatureList",
-    "demo": "Demo",
-    "outro": "Outro",
-  };
-  
-  const template = templateMap[templateName] || "HeroPromo";
-  return template + aspectSuffix;
+  const validTemplates = ["HeroPromo", "Carousel", "FeatureList", "Demo", "Outro", "EcommerceShowcase", "Testimonial", "Educational", "SaasLaunch"];
+  const base = validTemplates.includes(template) ? template : "HeroPromo";
+  return base + aspectSuffix;
 }
 
 // ── Timeout wrapper ──
@@ -110,7 +101,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 // ── Process render job ──
 async function processRender(job: Job<RenderJobData>) {
-  const { jobId, projectId, storyboard, assets, outputKey } = job.data;
+  const { jobId, projectId, storyboard, assets, outputKey, template } = job.data;
   const outputPath = path.join(TEMP_DIR, `${jobId}.mp4`);
 
   console.log(`[Worker] Starting render for job ${jobId}, project ${projectId}`);
@@ -130,7 +121,7 @@ async function processRender(job: Job<RenderJobData>) {
     console.log("[Worker] Bundling Remotion project...");
     const bundleLocation = await withTimeout(
       bundle({
-        entryPoint: path.resolve(__dirname, "compositions/index.ts"),
+        entryPoint: path.resolve(process.cwd(), "src/compositions/index.tsx"),
         webpackOverride: (config) => config,
       }),
       120000,
@@ -143,8 +134,7 @@ async function processRender(job: Job<RenderJobData>) {
       0,
     );
     const fps = 30;
-    const firstSceneType = storyboard.scenes?.[0]?.type || "hero";
-    const compositionId = getCompositionId(storyboard.aspect_ratio, firstSceneType);
+    const compositionId = getCompositionId(template || "HeroPromo", storyboard.aspect_ratio);
 
     // 4. Select composition
     const composition = await selectComposition({
