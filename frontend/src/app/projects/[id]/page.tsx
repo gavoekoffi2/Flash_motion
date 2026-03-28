@@ -9,6 +9,7 @@ import AssetUploader from "@/components/AssetUploader";
 import AssetManager from "@/components/AssetManager";
 import StoryboardEditor from "@/components/StoryboardEditor";
 import VideoPreview from "@/components/VideoPreview";
+import TemplateSelector from "@/components/TemplateSelector";
 
 type Tab = "script" | "assets" | "storyboard" | "render";
 
@@ -30,6 +31,9 @@ export default function ProjectPage() {
   const [scriptDraft, setScriptDraft] = useState("");
   const [savingScript, setSavingScript] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(false);
+  const [templateDraft, setTemplateDraft] = useState("");
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   useEffect(() => { checkAuth(); }, [checkAuth]);
   useEffect(() => { if (!loading && !user) router.push("/login"); }, [user, loading, router]);
@@ -150,6 +154,20 @@ export default function ProjectPage() {
     }
   }
 
+  async function handleSaveTemplate() {
+    setSavingTemplate(true);
+    try {
+      await api.updateProject(projectId, { template: templateDraft });
+      setProject({ ...project, template: templateDraft });
+      setEditingTemplate(false);
+      toast("Template mis à jour — pensez à re-générer le storyboard", "success");
+    } catch (err: any) {
+      toast(err.message, "error");
+    } finally {
+      setSavingTemplate(false);
+    }
+  }
+
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: "script", label: "Script", icon: "\u270F" },
     { key: "assets", label: `Assets (${assets.length})`, icon: "\uD83D\uDDBC" },
@@ -258,6 +276,39 @@ export default function ProjectPage() {
                 <pre className="whitespace-pre-wrap text-sm leading-relaxed">{project.script}</pre>
               )}
             </div>
+            {/* Template section */}
+            {!editingTemplate ? (
+              <div className="bg-dark-800 rounded-xl p-4 border border-dark-700 flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-gray-500">Template actuel :</span>
+                  <span className="ml-2 text-sm font-medium text-brand-400">{project.template || "HeroPromo"}</span>
+                  <span className="ml-3 text-xs text-gray-600">{project.aspectRatio}</span>
+                </div>
+                <button
+                  onClick={() => { setTemplateDraft(project.template || "HeroPromo"); setEditingTemplate(true); }}
+                  className="text-xs text-gray-400 hover:text-white"
+                >
+                  Changer
+                </button>
+              </div>
+            ) : (
+              <div className="bg-dark-800 rounded-xl p-4 border border-brand-500/30 space-y-4">
+                <TemplateSelector selected={templateDraft} onSelect={setTemplateDraft} />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveTemplate}
+                    disabled={savingTemplate}
+                    className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm"
+                  >
+                    {savingTemplate ? "Sauvegarde..." : "Appliquer le template"}
+                  </button>
+                  <button onClick={() => setEditingTemplate(false)} className="text-gray-400 hover:text-white px-4 py-2 text-sm">
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
+
             <button
               onClick={handleGenerateStoryboard}
               disabled={generating}
