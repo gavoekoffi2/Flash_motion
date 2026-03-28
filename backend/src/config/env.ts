@@ -25,6 +25,7 @@ export const env = {
   s3SecretKey: process.env.S3_SECRET_KEY || "minioadmin",
   s3Bucket: process.env.S3_BUCKET || "flash-motion",
   s3Region: process.env.S3_REGION || "us-east-1",
+  s3PublicEndpoint: process.env.S3_PUBLIC_ENDPOINT || "",
 
   llmMode: (process.env.LLM_MODE || "auto") as "openrouter" | "ollama" | "auto",
   openrouterApiKey: process.env.OPENROUTER_API_KEY || "",
@@ -42,6 +43,14 @@ export const env = {
   tempDir: process.env.TEMP_DIR || "/tmp/flash-motion",
   retentionDays: parseInt(process.env.RETENTION_DAYS || "30", 10),
 
+  // SMTP Email
+  smtpHost: process.env.SMTP_HOST || "",
+  smtpPort: parseInt(process.env.SMTP_PORT || "587", 10),
+  smtpUser: process.env.SMTP_USER || "",
+  smtpPass: process.env.SMTP_PASS || "",
+  smtpFrom: process.env.SMTP_FROM || "noreply@flashmotion.dev",
+  // App URL
+  appUrl: process.env.APP_URL || process.env.FRONTEND_URL || "http://localhost:3000",
   // Logging & Monitoring
   sentryDsn: process.env.SENTRY_DSN || "",
 } as const;

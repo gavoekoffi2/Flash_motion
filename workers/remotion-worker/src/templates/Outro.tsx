@@ -173,8 +173,8 @@ function OutroScene({
       {/* Animated button */}
       <div
         style={{
-          paddingX: "40px",
-          paddingY: "16px",
+          paddingLeft: "40px", paddingRight: "40px",
+          paddingTop: "16px", paddingBottom: "16px",
           backgroundColor: "#fff",
           borderRadius: "50px",
           opacity: opacity * exitOpacity,

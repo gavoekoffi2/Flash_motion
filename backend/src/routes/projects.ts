@@ -259,6 +259,7 @@ router.post("/:id/generate-storyboard", async (req: Request, res: Response) => {
       project.script,
       assetList,
       project.aspectRatio,
+      project.template || "HeroPromo",
     );
 
     await prisma.$transaction([

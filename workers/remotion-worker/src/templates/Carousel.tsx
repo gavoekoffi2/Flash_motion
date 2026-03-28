@@ -126,7 +126,7 @@ function CarouselScene({
                   style={{
                     width: "100%",
                     height: "100%",
-                    objectFit: asset.scale || "cover",
+                    objectFit: (asset.scale || "cover") as ("cover" | "contain" | "fill" | "none" | "scale-down"),
                   }}
                 />
               ) : (

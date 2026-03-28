@@ -106,3 +106,33 @@ export function validateTTSOptions(options: any): boolean {
   }
   return true;
 }
+
+/**
+ * Génère du TTS pour toutes les scènes d'un projet.
+ * Retourne un map sceneId -> TTSResult.
+ */
+export async function generateProjectTTS(
+  scenes: Array<{ id: string; narration?: string; text?: string }>,
+  projectId: string
+): Promise<Record<string, { s3Key: string; duration: number }>> {
+  const results: Record<string, { s3Key: string; duration: number }> = {};
+  
+  for (const scene of scenes) {
+    const text = scene.narration || scene.text || "";
+    if (!text.trim()) continue;
+    
+    try {
+      const ttsResult = await generateTTS({ text });
+      if (ttsResult.audioUrl) {
+        results[scene.id] = {
+          s3Key: ttsResult.audioUrl,
+          duration: ttsResult.duration,
+        };
+      }
+    } catch (err) {
+      console.error(`[TTS] Failed for scene ${scene.id}:`, err);
+    }
+  }
+  
+  return results;
+}
