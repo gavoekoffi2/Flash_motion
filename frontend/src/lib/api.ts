@@ -184,6 +184,28 @@ class ApiClient {
       { method: "DELETE" },
     );
   }
+
+  // ── Share ──
+  async createShareLink(projectId: string) {
+    return this.request<{ shareToken: string; shareUrl: string }>(
+      `/projects/${encodeURIComponent(projectId)}/share`,
+      { method: "POST" },
+    );
+  }
+
+  async revokeShareLink(projectId: string) {
+    return this.request<{ message: string }>(
+      `/projects/${encodeURIComponent(projectId)}/share`,
+      { method: "DELETE" },
+    );
+  }
+
+  async getSharedVideo(token: string) {
+    return this.request<{
+      project: { title: string; aspectRatio: string; template: string };
+      video: { downloadUrl: string; finishedAt: string | null };
+    }>(`/share/public/${encodeURIComponent(token)}`);
+  }
 }
 
 export const api = new ApiClient();

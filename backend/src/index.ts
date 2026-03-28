@@ -9,6 +9,7 @@ import authRoutes from "./routes/auth";
 import projectRoutes from "./routes/projects";
 import assetRoutes from "./routes/assets";
 import adminRoutes from "./routes/admin";
+import shareRoutes from "./routes/share";
 
 const app = express();
 
@@ -53,6 +54,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/projects", assetRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/projects", shareRoutes);
+app.use("/api/share", shareRoutes);
 
 // ── Health check ──
 app.get("/api/health", async (_req, res) => {

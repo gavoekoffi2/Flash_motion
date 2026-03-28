@@ -31,6 +31,8 @@ export default function ProjectPage() {
   const [scriptDraft, setScriptDraft] = useState("");
   const [savingScript, setSavingScript] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(false);
   const [templateDraft, setTemplateDraft] = useState("");
   const [savingTemplate, setSavingTemplate] = useState(false);
@@ -165,6 +167,21 @@ export default function ProjectPage() {
       toast(err.message, "error");
     } finally {
       setSavingTemplate(false);
+    }
+  }
+
+  async function handleShare() {
+    setSharing(true);
+    try {
+      const { shareToken } = await api.createShareLink(projectId);
+      const url = `${window.location.origin}/share/${shareToken}`;
+      setShareUrl(url);
+      navigator.clipboard?.writeText(url);
+      toast("Lien copie dans le presse-papier !", "success");
+    } catch (err: any) {
+      toast(err.message, "error");
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -435,12 +452,31 @@ export default function ProjectPage() {
                         Télécharger MP4
                       </a>
                       <button
+                        onClick={handleShare}
+                        disabled={sharing}
+                        className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white px-4 py-3 rounded-lg text-sm transition-colors"
+                        title="Générer un lien de partage"
+                      >
+                        {sharing ? "..." : "Partager"}
+                      </button>
+                      <button
                         onClick={handleStartRender}
                         className="bg-dark-700 hover:bg-dark-900 text-gray-300 px-4 py-3 rounded-lg text-sm"
                       >
                         Re-rendre
                       </button>
                     </div>
+                    {shareUrl && (
+                      <div className="bg-dark-900 border border-brand-500/30 rounded-lg p-3 flex items-center gap-2">
+                        <span className="text-xs text-gray-400 flex-1 truncate">{shareUrl}</span>
+                        <button
+                          onClick={() => { navigator.clipboard?.writeText(shareUrl); toast("Copié !", "success"); }}
+                          className="text-xs text-brand-400 hover:text-brand-300 shrink-0"
+                        >
+                          Copier
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
