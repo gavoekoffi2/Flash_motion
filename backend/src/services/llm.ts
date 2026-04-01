@@ -1,10 +1,9 @@
-import { env } from "../config/env";
+import { env } from '../config/env';
 
-// ── Storyboard JSON schema the LLM must produce ──
 export interface StoryboardScene {
   id: number;
   duration_s: number;
-  type: "hero" | "carousel" | "feature_list" | "demo" | "outro";
+  type: 'hero' | 'carousel' | 'feature_list' | 'demo' | 'outro';
   text: string;
   assets: { type: string; id: string; placement: string; scale: string }[];
   animation: string;
@@ -20,155 +19,160 @@ export interface Storyboard {
   caption_short: string;
 }
 
-const SYSTEM_PROMPT = `You are a motion design storyboard AI. Given a marketing script and a list of uploaded assets, produce a JSON storyboard.
-
-Rules:
-- Output ONLY valid JSON (no markdown fences, no explanation).
-- Each scene.text must be ≤ 180 characters.
-- Reference uploaded asset IDs in scenes[].assets[].id.
-- Supported scene types: hero, carousel, feature_list, demo, outro.
-- Supported animations: fade_in_up, slide_left, zoom_in, bounce, scale_up, fade_out.
-- Keep total duration between 15–60 seconds.
-- Include a caption_short (≤ 280 chars) for social sharing.
-- brand.primary_color should be extracted or inferred from context.
-- Generate secondary_color (30-50% darker than primary) and accent_color (bright complementary tint). All must be valid hex codes.
-- For feature_list scenes, separate individual items with " • " (bullet point).
-
-JSON schema:
-{
-  "project_title": string,
-  "aspect_ratio": "9:16" | "16:9" | "1:1",
-  "scenes": [{ "id": number, "duration_s": number, "type": string, "text": string, "assets": [{"type":"image"|"logo","id":string,"placement":"center"|"left"|"right"|"background","scale":"cover"|"contain"|"fill"}], "animation": string, "audio_clip": string|null, "tts_instruction": string|null }],
-  "brand": { "primary_color": string, "secondary_color": string, "accent_color": string, "logo_id": string|null },
-  "caption_short": string
-}`;
-
-const TEMPLATE_HINTS: Record<string, string> = {
-  HeroPromo: "hero+feature_list+outro: strong product headline, key benefits, CTA",
-  CinematicPromo: "hero+feature_list(3-4 items joined by bullet)+outro: cinematic premium, floating orbs, kinetic typography",
-  Testimonial: "hero+feature_list(customer quotes with names)+outro: social proof focus",
-  EcommerceShowcase: "hero+carousel(product names/prices)+feature_list(benefits)+outro",
-  Educational: "hero(intro)+feature_list(numbered steps)+demo(walkthrough)+outro: step-by-step",
-  SaasLaunch: "hero(tagline)+demo(key feature)+feature_list(benefits)+outro: tech/startup tone",
-};
-
-function buildUserPrompt(script: string, assetIds: { id: string; type: string; filename: string }[], aspectRatio: string, template = "HeroPromo", brandColor?: string): string {
-  const assetList = assetIds.length > 0
-    ? `\nUploaded assets:\n${assetIds.map(a => `- ${a.id} (${a.type}): ${a.filename}`).join("\n")}`
-    : "\nNo custom assets uploaded — use placeholder references.";
-
-  const hint = TEMPLATE_HINTS[template] || TEMPLATE_HINTS.HeroPromo;
-  const brandHint = brandColor ? `\nBrand primary color: ${brandColor} (use as brand.primary_color in JSON)` : "";
-  return `Script:
-"""${script}"""
-
-Aspect ratio: ${aspectRatio}
-Template: ${template} — ${hint}${brandHint}${assetList}
-
-Produce the storyboard JSON now.`;
+function extractJson(raw: string): string {
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  return start !== -1 && end !== -1 ? raw.slice(start, end + 1).trim() : raw.trim();
 }
 
-// ── OpenRouter call ──
 async function callOpenRouter(messages: { role: string; content: string }[]): Promise<string> {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
+  const apiKey = env.openrouterApiKey;
+  if (!apiKey) throw new Error('No OpenRouter API key');
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${env.openrouterApiKey}`,
-      "HTTP-Referer": env.frontendUrl,
-      "X-Title": "Flash Motion",
+      'Authorization': 'Bearer ' + apiKey,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': env.appUrl,
     },
     body: JSON.stringify({
-      model: env.openrouterModel,
+      model: env.openrouterModel || 'mistralai/mistral-7b-instruct',
       messages,
-      max_tokens: 2000,
+      max_tokens: 1500,
       temperature: 0.7,
     }),
   });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`OpenRouter error ${res.status}: ${body}`);
-  }
-
+  if (!res.ok) throw new Error('OpenRouter error ' + res.status + ': ' + await res.text());
   const data = await res.json() as any;
   return data.choices[0].message.content;
 }
 
-// ── Ollama call ──
-async function callOllama(messages: { role: string; content: string }[]): Promise<string> {
-  const res = await fetch(`${env.ollamaUrl}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+async function callGemini(messages: { role: string; content: string }[]): Promise<string> {
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error('No Google API key');
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: env.ollamaModel,
-      messages,
-      stream: false,
-      options: { num_predict: 2000, temperature: 0.7 },
+      contents: messages.map(m => ({
+        role: m.role === 'user' ? 'user' : 'model',
+        parts: [{ text: m.content }]
+      })),
+      generationConfig: { temperature: 0.7 },
     }),
   });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Ollama error ${res.status}: ${body}`);
-  }
-
+  if (!res.ok) throw new Error('Gemini error ' + res.status + ': ' + await res.text());
   const data = await res.json() as any;
-  return data.message.content;
+  return data.candidates[0].content.parts[0].text;
 }
 
-// ── Unified LLM call with fallback ──
-async function callLLM(messages: { role: string; content: string }[]): Promise<string> {
-  if (env.llmMode === "openrouter" || (env.llmMode === "auto" && env.openrouterApiKey)) {
-    try {
-      return await callOpenRouter(messages);
-    } catch (err) {
-      if (env.llmMode === "auto") {
-        console.warn("[LLM] OpenRouter failed, falling back to Ollama:", err);
-        return await callOllama(messages);
-      }
-      throw err;
-    }
+/**
+ * Fallback: generate a storyboard deterministically from the script.
+ * No LLM required. Splits text into scenes by sentences.
+ */
+function generateFallbackStoryboard(
+  script: string,
+  assets: { id: string; type: string; filename: string }[],
+  aspectRatio: string,
+  template: string,
+  brandColor: string,
+): Storyboard {
+  // Split script into sentences
+  const rawSentences = script
+    .replace(/([.!?])\s+/g, '$1\n')
+    .split('\n')
+    .map(s => s.trim())
+    .filter(s => s.length > 3);
+
+  const maxScenes = 5;
+  const sentences = rawSentences.slice(0, maxScenes * 2);
+
+  // Group sentences into up to 5 scenes
+  const sceneCount = Math.min(maxScenes, Math.max(2, Math.ceil(sentences.length / 2)));
+  const chunkSize = Math.ceil(sentences.length / sceneCount);
+
+  const sceneTypes: StoryboardScene['type'][] = ['hero', 'feature_list', 'carousel', 'demo', 'outro'];
+  const animations = ['fadeIn', 'slideUp', 'zoomIn', 'slideLeft', 'fadeOut'];
+
+  const scenes: StoryboardScene[] = [];
+  for (let i = 0; i < sceneCount; i++) {
+    const chunk = sentences.slice(i * chunkSize, (i + 1) * chunkSize);
+    const text = chunk.join(' ').substring(0, 200);
+    scenes.push({
+      id: i + 1,
+      duration_s: i === 0 ? 5 : i === sceneCount - 1 ? 4 : 6,
+      type: sceneTypes[i] || 'demo',
+      text,
+      assets: [],
+      animation: animations[i] || 'fadeIn',
+      audio_clip: null,
+      tts_instruction: null,
+    });
   }
 
-  return await callOllama(messages);
-}
+  // Extract a short title from first sentence
+  const firstSentence = sentences[0] || 'Flash Motion';
+  const title = firstSentence.replace(/[.!?,]/g, '').substring(0, 50);
 
-// ── Extract JSON from LLM response (handles markdown fences) ──
-function extractJson(raw: string): string {
-  // Strip markdown code fences
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenced) return fenced[1].trim();
-  // Find first { ... last }
-  const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (start !== -1 && end !== -1) return raw.slice(start, end + 1);
-  return raw.trim();
+  return {
+    project_title: title,
+    aspect_ratio: aspectRatio,
+    scenes,
+    brand: {
+      primary_color: brandColor || '#6C63FF',
+      logo_id: assets.find(a => a.type === 'logo')?.id || null,
+    },
+    caption_short: title.substring(0, 80),
+  };
 }
 
 export async function generateStoryboard(
   script: string,
   assets: { id: string; type: string; filename: string }[],
   aspectRatio: string,
-  template = "HeroPromo",
+  template = 'HeroPromo',
   brandColor?: string,
 ): Promise<Storyboard> {
+  const systemPrompt = `You are a motion design storyboard AI for short social media videos.
+Given a script, produce a JSON storyboard with 3-5 scenes.
+Each scene has: id (number), duration_s (4-8), type ("hero"|"feature_list"|"carousel"|"demo"|"outro"), text (string), assets (array), animation (string), audio_clip (null), tts_instruction (null).
+Also include: project_title, aspect_ratio, brand (with primary_color), caption_short.
+Output ONLY valid JSON, no markdown, no explanation.`;
+
+  const userPrompt = `Script: "${script}"
+Assets available: ${JSON.stringify(assets)}
+Aspect ratio: ${aspectRatio}
+Template: ${template}
+Brand color: ${brandColor || '#6C63FF'}
+
+Produce the storyboard JSON now.`;
+
   const messages = [
-    { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: buildUserPrompt(script, assets, aspectRatio, template, brandColor) },
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
   ];
 
-  const raw = await callLLM(messages);
-  const jsonStr = extractJson(raw);
+  // Try LLM providers in order, fall back to deterministic generator
+  const llmMode = env.llmMode;
 
-  try {
-    const storyboard = JSON.parse(jsonStr) as Storyboard;
-    // Basic validation
-    if (!storyboard.scenes || !Array.isArray(storyboard.scenes) || storyboard.scenes.length === 0) {
-      throw new Error("Storyboard must contain at least one scene");
+  const tryProviders = llmMode === 'openrouter'
+    ? [callOpenRouter]
+    : llmMode === 'auto'
+    ? [callOpenRouter, callGemini]
+    : [];
+
+  for (const callFn of tryProviders) {
+    try {
+      const raw = await callFn(messages);
+      const parsed = JSON.parse(extractJson(raw)) as Storyboard;
+      console.log('[LLM] Storyboard generated via', callFn.name);
+      return parsed;
+    } catch (err) {
+      console.warn('[LLM] Provider failed:', (err as Error).message, '— trying next');
     }
-    return storyboard;
-  } catch (err) {
-    throw new Error(`Failed to parse storyboard JSON: ${(err as Error).message}\nRaw LLM output: ${raw.slice(0, 500)}`);
   }
+
+  // Deterministic fallback — always works, no API key required
+  console.log('[LLM] Using deterministic fallback storyboard generator');
+  return generateFallbackStoryboard(script, assets, aspectRatio, template, brandColor || '#6C63FF');
 }
