@@ -68,7 +68,7 @@ services:
       JWT_EXPIRES_IN: 7d
       FRONTEND_URL: https://flash-motion.vercel.app,https://flashmotion.netlify.app,https://flash-motion-projobcopilotes-projects.vercel.app,https://flash-motion-git-main-projobcopilotes-projects.vercel.app,http://localhost:3000
       APP_URL: https://flash-motion-projobcopilotes-projects.vercel.app
-      LLM_MODE: openrouter
+      LLM_MODE: none
       OPENROUTER_API_KEY: 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
       OPENROUTER_MODEL: openai/gpt-4o-mini
       OLLAMA_URL: http://host.docker.internal:11434
