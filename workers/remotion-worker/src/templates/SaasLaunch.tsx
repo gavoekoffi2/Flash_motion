@@ -23,6 +23,7 @@ import {
   easeOutExpo,
   easeOutBack,
   progress,
+  buildSceneSequences,
 } from "../utils/motion";
 
 export interface SaasLaunchProps {
@@ -534,19 +535,14 @@ function SaasSceneDispatch({
 
 export const SaasLaunch: React.FC<SaasLaunchProps> = ({ scenes, brand, assetUrls }) => {
   const { fps } = useVideoConfig();
-  let frameOffset = 0;
+  const seqs = buildSceneSequences(scenes, fps);
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      {scenes.map((scene) => {
-        const durationFrames = Math.max(1, Math.round(scene.duration_s * fps));
-        const from = frameOffset;
-        frameOffset += durationFrames;
-        return (
-          <Sequence key={scene.id} from={from} durationInFrames={durationFrames}>
-            <SaasSceneDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
-          </Sequence>
-        );
-      })}
+      {seqs.map(({ scene, from, durationInFrames }) => (
+        <Sequence key={scene.id} from={from} durationInFrames={durationInFrames}>
+          <SaasSceneDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
+        </Sequence>
+      ))}
     </AbsoluteFill>
   );
 };

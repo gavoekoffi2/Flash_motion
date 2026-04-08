@@ -42,7 +42,7 @@ export function SceneLifecycle({
   enter = "zoom",
   exit = "fade",
   enterDuration = 18,
-  exitDuration = 15,
+  exitDuration = 14, // = SCENE_OVERLAP_FRAMES — keeps crossfade aligned
   style,
 }: {
   children: React.ReactNode;
@@ -597,6 +597,50 @@ export function useCounterUp(
   const frame = useCurrentFrame();
   const p = easeOutExpo(progress(frame, startFrame, startFrame + duration));
   return Math.round(target * p);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CROSS-SCENE TRANSITIONS
+//  Each scene's render Sequence is extended by SCENE_OVERLAP_FRAMES
+//  beyond its logical end. The next scene starts at the logical end,
+//  so both scenes render simultaneously during the overlap window —
+//  creating a true crossfade as the exit fades out and the enter fades in.
+// ═══════════════════════════════════════════════════════════════════
+export const SCENE_OVERLAP_FRAMES = 14;
+
+export interface SceneSequenceItem<T> {
+  scene: T;
+  from: number;
+  durationInFrames: number;
+  isLast: boolean;
+}
+
+export function buildSceneSequences<
+  T extends { duration_s: number },
+>(scenes: T[], fps: number): SceneSequenceItem<T>[] {
+  const result: SceneSequenceItem<T>[] = [];
+  let logicalOffset = 0;
+  for (let i = 0; i < scenes.length; i++) {
+    const original = scenes[i];
+    const isLast = i === scenes.length - 1;
+    const baseFrames = Math.max(1, Math.round(original.duration_s * fps));
+    const renderedFrames = isLast ? baseFrames : baseFrames + SCENE_OVERLAP_FRAMES;
+    // Inflate scene.duration_s so the inner scene component computes the
+    // SAME extended duration when it does scene.duration_s * fps. This keeps
+    // SceneLifecycle's exit window aligned with the actual render length.
+    const extendedScene = {
+      ...original,
+      duration_s: renderedFrames / fps,
+    } as T;
+    result.push({
+      scene: extendedScene,
+      from: logicalOffset,
+      durationInFrames: renderedFrames,
+      isLast,
+    });
+    logicalOffset += baseFrames;
+  }
+  return result;
 }
 
 // Re-export for templates

@@ -22,6 +22,7 @@ import {
   easeOutExpo,
   easeOutBack,
   progress,
+  buildSceneSequences,
 } from "../utils/motion";
 
 export interface EcommerceShowcaseProps {
@@ -529,19 +530,14 @@ export const EcommerceShowcase: React.FC<EcommerceShowcaseProps> = ({
   assetUrls,
 }) => {
   const { fps } = useVideoConfig();
-  let frameOffset = 0;
+  const seqs = buildSceneSequences(scenes, fps);
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      {scenes.map((scene) => {
-        const durationFrames = Math.max(1, Math.round(scene.duration_s * fps));
-        const from = frameOffset;
-        frameOffset += durationFrames;
-        return (
-          <Sequence key={scene.id} from={from} durationInFrames={durationFrames}>
-            <EcommerceSceneDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
-          </Sequence>
-        );
-      })}
+      {seqs.map(({ scene, from, durationInFrames }) => (
+        <Sequence key={scene.id} from={from} durationInFrames={durationInFrames}>
+          <EcommerceSceneDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
+        </Sequence>
+      ))}
     </AbsoluteFill>
   );
 };
