@@ -6,6 +6,12 @@ import { Testimonial } from "../templates/Testimonial";
 import { EcommerceShowcase } from "../templates/EcommerceShowcase";
 import { Educational } from "../templates/Educational";
 import { SaasLaunch } from "../templates/SaasLaunch";
+import { CinematicReels } from "../templates/CinematicReels";
+import { NeonCyberpunk } from "../templates/NeonCyberpunk";
+import { RestaurantMenu } from "../templates/RestaurantMenu";
+import { FitnessMotivation } from "../templates/FitnessMotivation";
+import { RealEstateTour } from "../templates/RealEstateTour";
+import { EventCountdown } from "../templates/EventCountdown";
 
 const FPS = 30;
 
@@ -40,6 +46,12 @@ export const RemotionRoot: React.FC = () => {
       <TemplateVariants id="EcommerceShowcase" Component={EcommerceShowcase} />
       <TemplateVariants id="Educational" Component={Educational} />
       <TemplateVariants id="SaasLaunch" Component={SaasLaunch} />
+      <TemplateVariants id="CinematicReels" Component={CinematicReels} />
+      <TemplateVariants id="NeonCyberpunk" Component={NeonCyberpunk} />
+      <TemplateVariants id="RestaurantMenu" Component={RestaurantMenu} />
+      <TemplateVariants id="FitnessMotivation" Component={FitnessMotivation} />
+      <TemplateVariants id="RealEstateTour" Component={RealEstateTour} />
+      <TemplateVariants id="EventCountdown" Component={EventCountdown} />
     </>
   );
 };

@@ -117,7 +117,19 @@ async function resolveAssetUrls(assets: RenderJobData["assets"]): Promise<Record
 }
 
 // ── Template registry ──
-const TEMPLATES = ["HeroPromo", "Testimonial", "EcommerceShowcase", "Educational", "SaasLaunch"];
+const TEMPLATES = [
+  "HeroPromo",
+  "Testimonial",
+  "EcommerceShowcase",
+  "Educational",
+  "SaasLaunch",
+  "CinematicReels",
+  "NeonCyberpunk",
+  "RestaurantMenu",
+  "FitnessMotivation",
+  "RealEstateTour",
+  "EventCountdown",
+];
 
 // ── Determine composition based on template + aspect ratio ──
 function getCompositionId(aspectRatio: string, template?: string): string {

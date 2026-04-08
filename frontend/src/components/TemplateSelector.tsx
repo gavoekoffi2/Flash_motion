@@ -46,6 +46,48 @@ const TEMPLATES: TemplateInfo[] = [
     preview: "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)",
     tags: ["SaaS", "Tech", "Startup"],
   },
+  {
+    id: "CinematicReels",
+    name: "Cinematic Reels",
+    description: "Style cinéma avec barres letterbox, grain argentique et typographie serif élégante.",
+    preview: "linear-gradient(135deg, #0b0806 0%, #e8a33d 100%)",
+    tags: ["Cinéma", "Film", "Luxe"],
+  },
+  {
+    id: "NeonCyberpunk",
+    name: "Neon Cyberpunk",
+    description: "Esthétique futuriste avec néons cyan/magenta, glitch, scanlines et ambiance sci-fi.",
+    preview: "linear-gradient(135deg, #030014 0%, #00f0ff 50%, #ff00aa 100%)",
+    tags: ["Tech", "Futuriste", "Gaming"],
+  },
+  {
+    id: "RestaurantMenu",
+    name: "Restaurant Menu",
+    description: "Présentation raffinée pour restaurants avec ornements, typographie serif et accents dorés.",
+    preview: "linear-gradient(135deg, #faf5eb 0%, #c9a961 60%, #2d1810 100%)",
+    tags: ["Restaurant", "Gastronomie", "Élégance"],
+  },
+  {
+    id: "FitnessMotivation",
+    name: "Fitness Motivation",
+    description: "Style explosif et énergétique avec typographie impact, accents rouges et rayures dynamiques.",
+    preview: "linear-gradient(135deg, #0a0a0a 0%, #ff0033 70%, #ffc300 100%)",
+    tags: ["Sport", "Fitness", "Motivation"],
+  },
+  {
+    id: "RealEstateTour",
+    name: "Real Estate Tour",
+    description: "Visite immobilière luxueuse avec coins dorés, typographie classique et ambiance premium.",
+    preview: "linear-gradient(135deg, #0a1f44 0%, #d4af37 100%)",
+    tags: ["Immobilier", "Luxe", "Visite"],
+  },
+  {
+    id: "EventCountdown",
+    name: "Event Countdown",
+    description: "Compte à rebours festif avec confettis, tuiles géantes et dégradé vibrant pour événements.",
+    preview: "linear-gradient(135deg, #6d28d9 0%, #ec4899 50%, #fbbf24 100%)",
+    tags: ["Événement", "Festif", "Soirée"],
+  },
 ];
 
 interface Props {
