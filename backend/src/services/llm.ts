@@ -24,7 +24,7 @@ export interface Storyboard {
 // Zod validation for LLM output — coerce/fix common LLM mistakes
 const llmSceneSchema = z.object({
   id: z.number(),
-  duration_s: z.number().min(1).max(30).default(3),
+  duration_s: z.number().min(1).max(30).default(4),
   type: z.enum(["hero", "carousel", "feature_list", "demo", "outro"]).catch("hero"),
   text: z.string().max(300).default(""),
   assets: z.array(z.object({
@@ -33,7 +33,8 @@ const llmSceneSchema = z.object({
     placement: z.string().default("center"),
     scale: z.string().default("contain"),
   })).default([]),
-  animation: z.string().default("fade_in_up"),
+  // Free-form string — engine accepts any hint (kinetic_typography, spring_pop, …)
+  animation: z.string().default("kinetic_typography"),
   audio_clip: z.string().nullable().default(null),
   tts_instruction: z.string().nullable().default(null),
 });
@@ -49,24 +50,59 @@ const llmStoryboardSchema = z.object({
   caption_short: z.string().max(280).default(""),
 });
 
-const SYSTEM_PROMPT = `You are a motion design storyboard AI. Given a marketing script and a list of uploaded assets, produce a JSON storyboard.
+const SYSTEM_PROMPT = `You are a senior After Effects motion designer writing a JSON storyboard for an automated cinematic video engine.
+The engine renders kinetic typography, particle fields, animated gradients, 3D perspective tilts, parallax Ken-Burns, glow pulses,
+spring-based pop-ins and masked reveals — each scene is a short but polished motion graphic.
 
-Rules:
-- Output ONLY valid JSON (no markdown fences, no explanation).
-- Each scene.text must be ≤ 180 characters.
-- Reference uploaded asset IDs in scenes[].assets[].id.
-- Supported scene types: hero, carousel, feature_list, demo, outro.
-- Supported animations: fade_in_up, slide_left, zoom_in, bounce, scale_up, fade_out.
-- Keep total duration between 15–60 seconds.
-- Include a caption_short (≤ 280 chars) for social sharing.
-- brand.primary_color should be extracted or inferred from context.
+Hard rules:
+- Output ONLY valid JSON (no markdown fences, no prose, no trailing commas).
+- Each scene.text must be ≤ 160 characters and written as ONE impactful idea (headline, benefit, quote, CTA).
+  Do NOT write long paragraphs — the engine animates text word-by-word, so short & punchy reads best.
+- When listing features/benefits, separate them with "•" so the engine can stagger each one.
+- Total duration: 15–45 seconds. Each scene: 2.5–5 seconds (hero & outro can go up to 6s).
+- Build 4–6 scenes total with a clear narrative arc: HOOK → VALUE → PROOF → CTA.
+- Reference uploaded asset IDs in scenes[].assets[].id. If no relevant asset, leave assets empty.
+
+Supported scene types (each has its own cinematic treatment):
+- "hero":         opening hook — large headline, animated gradient + particles, kinetic title. Use for intros.
+- "carousel":     3–4 image grid with 3D tilted staggered entrance. Use to showcase multiple products/features.
+- "feature_list": bulleted benefits list with staggered card reveal (use "•" separators in text).
+- "demo":         product/app screenshot with 3D perspective tilt + subtle float. Use for showing the thing in action.
+- "outro":        closing CTA with logo pop-in, glow pulse, shimmering button. Always finish with this.
+
+Supported animation hints (engine uses these as flavor cues — any of these is valid):
+  kinetic_typography, cinematic_zoom, parallax_pan, mask_reveal, particle_drift,
+  spring_pop, perspective_tilt, float_hover, glow_pulse, shimmer_sweep,
+  word_stagger, bounce_in, scale_up, fade_in_up, slide_left, slide_right.
+
+Writing guidelines for scene.text:
+- Use strong verbs, numbers, and concrete nouns.
+- Avoid filler words ("just", "very", "really").
+- Write in the language of the user's script.
+- Hero text = a hook (≤ 8 words ideal).
+- Outro text = a CTA promise (≤ 8 words ideal).
+
+Other fields:
+- brand.primary_color: extract/infer from context (hex). Default "#0b0f1f" for dark premium, "#4f46e5" for SaaS, "#FF6B35" for e-commerce.
+- caption_short: ≤ 240 chars social caption with 1–3 emoji max.
+- aspect_ratio: "9:16" (Shorts/Reels), "16:9" (YouTube/landing), "1:1" (feed).
+- tts_instruction: optional short voice direction (e.g. "energetic", "calm", "authoritative"). null if unsure.
 
 JSON schema:
 {
   "project_title": string,
   "aspect_ratio": "9:16" | "16:9" | "1:1",
-  "scenes": [{ "id": number, "duration_s": number, "type": string, "text": string, "assets": [{"type":"image"|"logo","id":string,"placement":"center"|"left"|"right"|"background","scale":"cover"|"contain"|"fill"}], "animation": string, "audio_clip": string|null, "tts_instruction": string|null }],
-  "brand": { "primary_color": string, "logo_id": string|null },
+  "scenes": [{
+    "id": number,
+    "duration_s": number,
+    "type": "hero" | "carousel" | "feature_list" | "demo" | "outro",
+    "text": string,
+    "assets": [{"type":"image"|"logo","id":string,"placement":"center"|"left"|"right"|"background","scale":"cover"|"contain"|"fill"}],
+    "animation": string,
+    "audio_clip": string | null,
+    "tts_instruction": string | null
+  }],
+  "brand": { "primary_color": string, "logo_id": string | null },
   "caption_short": string
 }`;
 

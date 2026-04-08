@@ -161,10 +161,24 @@ async function processRender(job: Job<RenderJobData>) {
     const assetUrls = await resolveAssetUrls(assets);
 
     // 2. Bundle Remotion project
-    console.log("[Worker] Bundling Remotion project...");
+    // Resolve path to the SOURCE .tsx entry point — works in both dev (tsx)
+    // and prod (compiled to dist/ → need to walk back to src/).
+    const candidates = [
+      path.resolve(__dirname, "compositions/index.tsx"),
+      path.resolve(__dirname, "../src/compositions/index.tsx"),
+      path.resolve(process.cwd(), "src/compositions/index.tsx"),
+      path.resolve(process.cwd(), "workers/remotion-worker/src/compositions/index.tsx"),
+    ];
+    const entryPoint = candidates.find((p) => fs.existsSync(p));
+    if (!entryPoint) {
+      throw new Error(
+        `Could not locate Remotion entry point. Tried: ${candidates.join(", ")}`,
+      );
+    }
+    console.log(`[Worker] Bundling Remotion project from ${entryPoint}...`);
     const bundleLocation = await withTimeout(
       bundle({
-        entryPoint: path.resolve(__dirname, "compositions/index.ts"),
+        entryPoint,
         webpackOverride: (config) => config,
       }),
       120000,

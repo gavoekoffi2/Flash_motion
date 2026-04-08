@@ -5,9 +5,23 @@ import {
   useCurrentFrame,
   useVideoConfig,
   interpolate,
-  spring,
-  Img,
 } from "remotion";
+import {
+  SafeImg,
+  SceneLifecycle,
+  KineticText,
+  GradientOrbs,
+  GridPattern,
+  NoiseOverlay,
+  GlowPulse,
+  CTAButton,
+  AnimatedUnderline,
+  usePopIn,
+  useFloat,
+  easeOutExpo,
+  easeOutBack,
+  progress,
+} from "../utils/motion";
 
 export interface EducationalProps {
   scenes: any[];
@@ -15,114 +29,425 @@ export interface EducationalProps {
   assetUrls: Record<string, string>;
 }
 
-function SafeImg({ src, style }: { src: string | null | undefined; style: React.CSSProperties }) {
-  if (!src) return null;
-  return <Img src={src} style={style} />;
+const ACCENT = "#4FC3F7";
+const ACCENT_SOFT = "#4FC3F744";
+
+function firstUrl(scene: any, assetUrls: Record<string, string>): string | null {
+  const a = scene.assets?.[0];
+  if (!a) return null;
+  return a.url || (a.id ? assetUrls[a.id] : null) || null;
 }
 
-function EducationalScene({ scene, brand, assetUrls, fps, sceneIndex, totalScenes }: {
-  scene: any; brand: any; assetUrls: Record<string, string>; fps: number; sceneIndex: number; totalScenes: number;
+// ── Progress dots at top ──
+function ProgressDots({
+  total,
+  current,
+  startFrame,
+}: {
+  total: number;
+  current: number;
+  startFrame: number;
 }) {
   const frame = useCurrentFrame();
-  const bgColor = brand.primary_color || "#1e3a5f";
-  const accentLight = "#4FC3F7";
-  const primaryAsset = scene.assets?.[0];
-  const imageUrl = primaryAsset?.url || (primaryAsset?.id ? assetUrls[primaryAsset.id] : null) || null;
-
-  const fadeIn = interpolate(frame, [0, fps * 0.4], [0, 1], { extrapolateRight: "clamp" });
-  const slideUp = interpolate(frame, [0, fps * 0.5], [25, 0], { extrapolateRight: "clamp" });
-
-  // Intro / title
-  if (scene.type === "hero") {
-    return (
-      <AbsoluteFill style={{ backgroundColor: bgColor, justifyContent: "center", alignItems: "center", padding: 50 }}>
-        {/* Step indicator */}
-        <div style={{ position: "absolute", top: 50, left: 50, right: 50, display: "flex", gap: 8 }}>
-          {Array.from({ length: totalScenes }).map((_, i) => (
-            <div key={i} style={{
-              flex: 1, height: 4, borderRadius: 2,
-              backgroundColor: i <= sceneIndex ? accentLight : "rgba(255,255,255,0.15)",
-              transition: "background 0.3s",
-            }} />
-          ))}
-        </div>
-        <div style={{ opacity: fadeIn, transform: `translateY(${slideUp}px)`, textAlign: "center", maxWidth: "85%" }}>
-          {imageUrl && (
-            <div style={{ width: 120, height: 120, margin: "0 auto 30px", borderRadius: 20, overflow: "hidden", border: `3px solid ${accentLight}33` }}>
-              <SafeImg src={imageUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            </div>
-          )}
-          <p style={{ fontSize: 46, fontWeight: 800, color: "#fff", lineHeight: 1.2, margin: 0 }}>
-            {scene.text}
-          </p>
-        </div>
-      </AbsoluteFill>
-    );
-  }
-
-  // Step / feature — numbered steps
-  if (scene.type === "feature_list" || scene.type === "demo") {
-    const stepBounce = spring({ frame, fps, config: { damping: 8, mass: 0.6 } });
-    return (
-      <AbsoluteFill style={{ backgroundColor: bgColor, padding: 50 }}>
-        {/* Progress bar */}
-        <div style={{ position: "absolute", top: 50, left: 50, right: 50, display: "flex", gap: 8 }}>
-          {Array.from({ length: totalScenes }).map((_, i) => (
-            <div key={i} style={{
-              flex: 1, height: 4, borderRadius: 2,
-              backgroundColor: i <= sceneIndex ? accentLight : "rgba(255,255,255,0.15)",
-            }} />
-          ))}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", height: "100%", paddingTop: 40 }}>
-          {/* Step number */}
-          <div style={{
-            width: 70, height: 70, borderRadius: 35, backgroundColor: accentLight, display: "flex",
-            alignItems: "center", justifyContent: "center", marginBottom: 25,
-            transform: `scale(${interpolate(stepBounce, [0, 1], [0.3, 1])})`,
-            fontSize: 32, fontWeight: 800, color: bgColor,
-          }}>
-            {sceneIndex + 1}
-          </div>
-          {/* Image */}
-          {imageUrl && (
-            <div style={{ width: "90%", marginBottom: 25, borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", opacity: fadeIn }}>
-              <SafeImg src={imageUrl} style={{ width: "100%", objectFit: "contain" }} />
-            </div>
-          )}
-          {/* Text */}
-          <div style={{ opacity: fadeIn, transform: `translateY(${slideUp}px)` }}>
-            <p style={{ fontSize: 34, fontWeight: 600, color: "#fff", lineHeight: 1.4, margin: 0 }}>
-              {scene.text}
-            </p>
-          </div>
-        </div>
-      </AbsoluteFill>
-    );
-  }
-
-  // Outro / summary
   return (
-    <AbsoluteFill style={{ backgroundColor: bgColor, justifyContent: "center", alignItems: "center", padding: 50 }}>
-      <div style={{ opacity: fadeIn, textAlign: "center" }}>
+    <div
+      style={{
+        position: "absolute",
+        top: 60,
+        left: 60,
+        right: 60,
+        display: "flex",
+        gap: 10,
+        zIndex: 5,
+      }}
+    >
+      {Array.from({ length: total }).map((_, i) => {
+        const p = easeOutExpo(progress(frame, startFrame + i * 3, startFrame + 16 + i * 3));
+        const active = i <= current;
+        return (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              height: 5,
+              borderRadius: 3,
+              background: active ? ACCENT : "rgba(255,255,255,0.15)",
+              boxShadow: active ? `0 0 14px ${ACCENT}aa` : undefined,
+              opacity: p,
+              transform: `scaleX(${p})`,
+              transformOrigin: "left center",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Intro / title ──
+function IntroScene({
+  scene,
+  brand,
+  assetUrls,
+  sceneIndex,
+  totalScenes,
+}: {
+  scene: any;
+  brand: any;
+  assetUrls: Record<string, string>;
+  sceneIndex: number;
+  totalScenes: number;
+}) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const durationFrames = scene.duration_s * fps;
+  const bg = brand.primary_color || "#0a1e3c";
+  const imageUrl = firstUrl(scene, assetUrls);
+  const logoSpring = usePopIn(5, { damping: 14, stiffness: 110 });
+
+  return (
+    <SceneLifecycle
+      durationInFrames={durationFrames}
+      enter="zoom"
+      exit="fade"
+      style={{
+        background: `linear-gradient(160deg, ${bg} 0%, #041024 100%)`,
+      }}
+    >
+      <GridPattern color="rgba(79,195,247,0.08)" size={70} />
+      <GradientOrbs
+        colors={[`${ACCENT}44`, `${bg}`, `${ACCENT}22`]}
+        count={3}
+        seed={scene.id}
+      />
+      <GlowPulse color={ACCENT} size={620} intensityMax={0.35} />
+      <ProgressDots total={totalScenes} current={sceneIndex} startFrame={0} />
+
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "8% 6%",
+          textAlign: "center",
+        }}
+      >
         {imageUrl && (
-          <div style={{ width: 90, height: 90, margin: "0 auto 25px" }}>
-            <SafeImg src={imageUrl} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+          <div
+            style={{
+              width: 140,
+              height: 140,
+              marginBottom: 38,
+              borderRadius: 30,
+              overflow: "hidden",
+              border: `3px solid ${ACCENT_SOFT}`,
+              boxShadow: `0 20px 60px rgba(0,0,0,0.5), 0 0 80px ${ACCENT}33`,
+              transform: `scale(${interpolate(logoSpring, [0, 1], [0.5, 1])})`,
+            }}
+          >
+            <SafeImg src={imageUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
         )}
-        <p style={{ fontSize: 40, fontWeight: 700, color: "#fff", lineHeight: 1.3, margin: "0 0 30px", maxWidth: "85%" }}>
-          {scene.text}
-        </p>
-        <div style={{
-          background: accentLight, color: bgColor, padding: "14px 40px", borderRadius: 50,
-          fontSize: 22, fontWeight: 700, display: "inline-block",
-          opacity: interpolate(frame, [fps * 0.6, fps * 1], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-        }}>
-          En savoir plus
+        <KineticText
+          text={scene.text}
+          start={fps * 0.3}
+          stagger={4}
+          perItemDuration={20}
+          riseDistance={40}
+          style={{ maxWidth: "88%" }}
+          itemStyle={{
+            fontSize: 54,
+            fontWeight: 900,
+            color: "#fff",
+            lineHeight: 1.12,
+            letterSpacing: -0.6,
+            textShadow: "0 6px 30px rgba(0,0,0,0.5)",
+          }}
+        />
+        <div style={{ marginTop: 30 }}>
+          <AnimatedUnderline color={ACCENT} width={170} height={5} start={fps * 1.2} duration={22} />
         </div>
       </div>
-    </AbsoluteFill>
+      <NoiseOverlay opacity={0.06} />
+    </SceneLifecycle>
   );
+}
+
+// ── Step / feature — numbered card with animated icon ──
+function StepScene({
+  scene,
+  brand,
+  assetUrls,
+  sceneIndex,
+  totalScenes,
+}: {
+  scene: any;
+  brand: any;
+  assetUrls: Record<string, string>;
+  sceneIndex: number;
+  totalScenes: number;
+}) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const durationFrames = scene.duration_s * fps;
+  const bg = brand.primary_color || "#0a1e3c";
+  const imageUrl = firstUrl(scene, assetUrls);
+  const numberSpring = usePopIn(4, { damping: 8, stiffness: 120 });
+  const float = useFloat(6, 3.2);
+
+  return (
+    <SceneLifecycle
+      durationInFrames={durationFrames}
+      enter="slideUp"
+      exit="fade"
+      style={{
+        background: `linear-gradient(150deg, ${bg} 0%, #030a18 100%)`,
+      }}
+    >
+      <GridPattern color="rgba(79,195,247,0.05)" size={70} />
+      <GradientOrbs colors={[`${ACCENT}33`, `${bg}`]} count={3} seed={scene.id + 10} />
+      <ProgressDots total={totalScenes} current={sceneIndex} startFrame={0} />
+
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          padding: "12% 7% 8% 7%",
+        }}
+      >
+        {/* Number badge */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 20,
+            marginBottom: 30,
+            transform: float,
+          }}
+        >
+          <div
+            style={{
+              width: 90,
+              height: 90,
+              borderRadius: 45,
+              background: `linear-gradient(135deg, ${ACCENT}, #2196F3)`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              fontSize: 42,
+              fontWeight: 900,
+              transform: `scale(${interpolate(numberSpring, [0, 1], [0, 1])}) rotate(${(1 - numberSpring) * -25}deg)`,
+              boxShadow: `0 14px 40px ${ACCENT}55, 0 0 60px ${ACCENT}44`,
+              flexShrink: 0,
+            }}
+          >
+            {sceneIndex + 1}
+          </div>
+          <div
+            style={{
+              flex: 1,
+              height: 3,
+              background: `linear-gradient(90deg, ${ACCENT}, transparent)`,
+              opacity: easeOutExpo(progress(frame, 10, 28)),
+              transformOrigin: "left",
+              transform: `scaleX(${easeOutExpo(progress(frame, 10, 28))})`,
+            }}
+          />
+        </div>
+
+        {imageUrl && (
+          <div
+            style={{
+              width: "88%",
+              marginBottom: 30,
+              borderRadius: 20,
+              overflow: "hidden",
+              border: `1px solid ${ACCENT_SOFT}`,
+              boxShadow: `0 30px 70px rgba(0,0,0,0.6), 0 0 60px ${ACCENT}22`,
+              opacity: easeOutExpo(progress(frame, 8, 26)),
+              transform: `scale(${0.9 + easeOutExpo(progress(frame, 8, 26)) * 0.1})`,
+            }}
+          >
+            <SafeImg src={imageUrl} style={{ width: "100%", objectFit: "cover" }} />
+          </div>
+        )}
+
+        <KineticText
+          text={scene.text}
+          start={fps * 0.5}
+          mode="word"
+          stagger={3}
+          perItemDuration={16}
+          riseDistance={28}
+          style={{ justifyContent: "flex-start" }}
+          itemStyle={{
+            fontSize: 34,
+            fontWeight: 700,
+            color: "#fff",
+            lineHeight: 1.35,
+            textShadow: "0 2px 20px rgba(0,0,0,0.5)",
+          }}
+        />
+      </div>
+      <NoiseOverlay opacity={0.05} />
+    </SceneLifecycle>
+  );
+}
+
+// ── Outro — checkmark + CTA ──
+function CompletionScene({
+  scene,
+  brand,
+  assetUrls,
+}: {
+  scene: any;
+  brand: any;
+  assetUrls: Record<string, string>;
+}) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const durationFrames = scene.duration_s * fps;
+  const bg = brand.primary_color || "#0a1e3c";
+  const imageUrl = firstUrl(scene, assetUrls);
+  const checkSpring = usePopIn(2, { damping: 9, stiffness: 130 });
+
+  return (
+    <SceneLifecycle
+      durationInFrames={durationFrames}
+      enter="zoom"
+      exit="fade"
+      style={{
+        background: `radial-gradient(ellipse at center, ${ACCENT}22 0%, ${bg} 70%)`,
+      }}
+    >
+      <GridPattern color="rgba(79,195,247,0.08)" size={70} />
+      <GradientOrbs colors={[`${ACCENT}44`, `${bg}`]} count={4} seed={scene.id + 20} />
+      <GlowPulse color={ACCENT} size={720} intensityMax={0.45} />
+
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "8% 6%",
+          textAlign: "center",
+        }}
+      >
+        {/* Big checkmark / logo */}
+        {imageUrl ? (
+          <div
+            style={{
+              width: 130,
+              height: 130,
+              marginBottom: 38,
+              transform: `scale(${interpolate(checkSpring, [0, 1], [0.3, 1])})`,
+              filter: `drop-shadow(0 0 40px ${ACCENT})`,
+            }}
+          >
+            <SafeImg src={imageUrl} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+          </div>
+        ) : (
+          <div
+            style={{
+              width: 140,
+              height: 140,
+              borderRadius: 70,
+              background: `linear-gradient(135deg, ${ACCENT}, #2196F3)`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 80,
+              color: "#fff",
+              fontWeight: 900,
+              marginBottom: 38,
+              transform: `scale(${interpolate(checkSpring, [0, 1], [0.2, 1])}) rotate(${(1 - checkSpring) * -20}deg)`,
+              boxShadow: `0 20px 60px ${ACCENT}55, 0 0 100px ${ACCENT}66`,
+            }}
+          >
+            ✓
+          </div>
+        )}
+        <KineticText
+          text={scene.text}
+          start={8}
+          stagger={4}
+          perItemDuration={18}
+          style={{ maxWidth: "90%", marginBottom: 40 }}
+          itemStyle={{
+            fontSize: 50,
+            fontWeight: 900,
+            color: "#fff",
+            lineHeight: 1.15,
+            letterSpacing: -0.5,
+            textShadow: "0 6px 30px rgba(0,0,0,0.5)",
+          }}
+        />
+        <CTAButton text="En savoir plus" bg={ACCENT} color={bg} startFrame={fps * 1.2} />
+      </div>
+      <NoiseOverlay opacity={0.06} />
+    </SceneLifecycle>
+  );
+}
+
+function EducationalSceneDispatch({
+  scene,
+  brand,
+  assetUrls,
+  sceneIndex,
+  totalScenes,
+}: {
+  scene: any;
+  brand: any;
+  assetUrls: Record<string, string>;
+  sceneIndex: number;
+  totalScenes: number;
+}) {
+  switch (scene.type) {
+    case "hero":
+      return (
+        <IntroScene
+          scene={scene}
+          brand={brand}
+          assetUrls={assetUrls}
+          sceneIndex={sceneIndex}
+          totalScenes={totalScenes}
+        />
+      );
+    case "feature_list":
+    case "demo":
+    case "carousel":
+      return (
+        <StepScene
+          scene={scene}
+          brand={brand}
+          assetUrls={assetUrls}
+          sceneIndex={sceneIndex}
+          totalScenes={totalScenes}
+        />
+      );
+    case "outro":
+      return <CompletionScene scene={scene} brand={brand} assetUrls={assetUrls} />;
+    default:
+      return (
+        <StepScene
+          scene={scene}
+          brand={brand}
+          assetUrls={assetUrls}
+          sceneIndex={sceneIndex}
+          totalScenes={totalScenes}
+        />
+      );
+  }
 }
 
 export const Educational: React.FC<EducationalProps> = ({ scenes, brand, assetUrls }) => {
@@ -131,12 +456,18 @@ export const Educational: React.FC<EducationalProps> = ({ scenes, brand, assetUr
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
       {scenes.map((scene, i) => {
-        const durationFrames = scene.duration_s * fps;
+        const durationFrames = Math.max(1, Math.round(scene.duration_s * fps));
         const from = frameOffset;
         frameOffset += durationFrames;
         return (
           <Sequence key={scene.id} from={from} durationInFrames={durationFrames}>
-            <EducationalScene scene={scene} brand={brand} assetUrls={assetUrls} fps={fps} sceneIndex={i} totalScenes={scenes.length} />
+            <EducationalSceneDispatch
+              scene={scene}
+              brand={brand}
+              assetUrls={assetUrls}
+              sceneIndex={i}
+              totalScenes={scenes.length}
+            />
           </Sequence>
         );
       })}

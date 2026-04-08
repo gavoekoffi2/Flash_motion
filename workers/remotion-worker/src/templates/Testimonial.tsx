@@ -5,9 +5,22 @@ import {
   useCurrentFrame,
   useVideoConfig,
   interpolate,
-  spring,
-  Img,
 } from "remotion";
+import {
+  SafeImg,
+  SceneLifecycle,
+  KineticText,
+  GradientOrbs,
+  NoiseOverlay,
+  GlowPulse,
+  AnimatedUnderline,
+  CTAButton,
+  usePopIn,
+  useFloat,
+  easeOutExpo,
+  easeOutBack,
+  progress,
+} from "../utils/motion";
 
 export interface TestimonialProps {
   scenes: any[];
@@ -15,96 +28,350 @@ export interface TestimonialProps {
   assetUrls: Record<string, string>;
 }
 
-function SafeImg({ src, style }: { src: string | null | undefined; style: React.CSSProperties }) {
-  if (!src) return null;
-  return <Img src={src} style={style} />;
+function firstUrl(scene: any, assetUrls: Record<string, string>): string | null {
+  const a = scene.assets?.[0];
+  if (!a) return null;
+  return a.url || (a.id ? assetUrls[a.id] : null) || null;
 }
 
-function TestimonialScene({ scene, brand, assetUrls, fps }: { scene: any; brand: any; assetUrls: Record<string, string>; fps: number }) {
-  const frame = useCurrentFrame();
+// ── Hero/Intro — elegant title card ──
+function IntroScene({ scene, brand }: { scene: any; brand: any }) {
+  const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const bgColor = brand.primary_color || "#1a1a2e";
-  const primaryAsset = scene.assets?.[0];
-  const imageUrl = primaryAsset?.url || (primaryAsset?.id ? assetUrls[primaryAsset.id] : null) || null;
+  const bg = brand.primary_color || "#101828";
 
-  const fadeIn = interpolate(frame, [0, fps * 0.4], [0, 1], { extrapolateRight: "clamp" });
-  const slideUp = interpolate(frame, [0, fps * 0.5], [30, 0], { extrapolateRight: "clamp" });
+  return (
+    <SceneLifecycle
+      durationInFrames={durationFrames}
+      enter="zoom"
+      exit="fade"
+      style={{
+        background: `radial-gradient(circle at 50% 40%, #ffffff12 0%, ${bg} 70%)`,
+      }}
+    >
+      <GradientOrbs
+        colors={[`${bg}`, "#ffffff22", "#ffffff10"]}
+        count={3}
+        seed={scene.id}
+        blur={100}
+      />
+      <GlowPulse color="#ffffff" size={680} intensityMax={0.3} />
 
-  if (scene.type === "hero" || scene.type === "intro") {
-    return (
-      <AbsoluteFill style={{ backgroundColor: bgColor, justifyContent: "center", alignItems: "center", padding: 60 }}>
-        <div style={{ opacity: fadeIn, transform: `translateY(${slideUp}px)`, textAlign: "center", maxWidth: "85%" }}>
-          <p style={{ fontSize: 52, fontWeight: 800, color: "#fff", lineHeight: 1.2, margin: 0 }}>
-            {scene.text}
-          </p>
-          <div style={{
-            marginTop: 30, width: 60, height: 4, backgroundColor: "rgba(255,255,255,0.4)", borderRadius: 2, margin: "30px auto 0",
-          }} />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "7% 6%",
+          textAlign: "center",
+        }}
+      >
+        <KineticText
+          text={scene.text}
+          start={5}
+          mode="word"
+          stagger={5}
+          perItemDuration={22}
+          riseDistance={45}
+          style={{ maxWidth: "88%" }}
+          itemStyle={{
+            fontSize: 60,
+            fontWeight: 900,
+            color: "#fff",
+            letterSpacing: -0.8,
+            lineHeight: 1.12,
+            textShadow: "0 8px 40px rgba(0,0,0,0.5)",
+          }}
+        />
+        <div style={{ marginTop: 36 }}>
+          <AnimatedUnderline color="#fff" width={180} height={5} start={fps * 0.9} duration={22} />
         </div>
-      </AbsoluteFill>
-    );
-  }
+      </div>
+      <NoiseOverlay opacity={0.07} />
+    </SceneLifecycle>
+  );
+}
 
-  if (scene.type === "testimonial" || scene.type === "feature_list") {
-    const quoteScale = spring({ frame, fps, config: { damping: 60 } });
-    return (
-      <AbsoluteFill style={{ backgroundColor: bgColor, justifyContent: "center", alignItems: "center", padding: 50 }}>
-        {/* Quote mark */}
-        <div style={{
-          position: "absolute", top: 80, left: 60, fontSize: 200, color: "rgba(255,255,255,0.08)",
-          fontFamily: "Georgia, serif", lineHeight: 1,
-          transform: `scale(${interpolate(quoteScale, [0, 1], [0.5, 1])})`,
-        }}>
-          &ldquo;
-        </div>
-        {/* Avatar */}
+// ── Testimonial — quote with avatar, large quote mark, floating card ──
+function QuoteScene({
+  scene,
+  brand,
+  assetUrls,
+}: {
+  scene: any;
+  brand: any;
+  assetUrls: Record<string, string>;
+}) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const durationFrames = scene.duration_s * fps;
+  const bg = brand.primary_color || "#101828";
+  const imageUrl = firstUrl(scene, assetUrls);
+  const quotePop = usePopIn(0, { damping: 14, stiffness: 110 });
+  const float = useFloat(6, 4);
+
+  return (
+    <SceneLifecycle
+      durationInFrames={durationFrames}
+      enter="slideUp"
+      exit="scaleDown"
+      style={{
+        background: `linear-gradient(145deg, ${bg} 0%, #000000 100%)`,
+      }}
+    >
+      <GradientOrbs
+        colors={["#ffffff14", `${bg}`, "#ffffff10"]}
+        count={3}
+        seed={scene.id + 11}
+      />
+
+      {/* Giant quote mark watermark */}
+      <div
+        style={{
+          position: "absolute",
+          top: "6%",
+          left: "8%",
+          fontSize: 380,
+          fontFamily: "Georgia, 'Times New Roman', serif",
+          color: "rgba(255,255,255,0.08)",
+          lineHeight: 0.8,
+          transform: `scale(${interpolate(quotePop, [0, 1], [0.4, 1])})`,
+          transformOrigin: "top left",
+        }}
+      >
+        &ldquo;
+      </div>
+
+      {/* Central quote card */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "10% 6%",
+          transform: float,
+        }}
+      >
         {imageUrl && (
-          <div style={{
-            width: 100, height: 100, borderRadius: 50, overflow: "hidden", marginBottom: 30, border: "3px solid rgba(255,255,255,0.3)",
-            opacity: fadeIn, transform: `scale(${interpolate(quoteScale, [0, 1], [0.8, 1])})`,
-          }}>
+          <div
+            style={{
+              width: 130,
+              height: 130,
+              borderRadius: 65,
+              overflow: "hidden",
+              marginBottom: 32,
+              border: "4px solid rgba(255,255,255,0.25)",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 80px rgba(255,255,255,0.15)",
+              transform: `scale(${interpolate(quotePop, [0, 1], [0.5, 1])})`,
+            }}
+          >
             <SafeImg src={imageUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
         )}
-        <div style={{ opacity: fadeIn, transform: `translateY(${slideUp}px)`, textAlign: "center", maxWidth: "80%", zIndex: 1 }}>
-          <p style={{ fontSize: 34, fontWeight: 500, color: "#fff", lineHeight: 1.5, fontStyle: "italic", margin: 0 }}>
-            &ldquo;{scene.text}&rdquo;
-          </p>
-        </div>
-      </AbsoluteFill>
-    );
-  }
-
-  // Stars / rating scene
-  if (scene.type === "demo" || scene.type === "carousel") {
-    const stars = "★★★★★";
-    return (
-      <AbsoluteFill style={{ backgroundColor: bgColor, justifyContent: "center", alignItems: "center", padding: 50 }}>
-        <div style={{ opacity: fadeIn, textAlign: "center" }}>
-          <div style={{ fontSize: 50, color: "#FFD700", letterSpacing: 8, marginBottom: 30 }}>{stars}</div>
-          <p style={{ fontSize: 36, fontWeight: 600, color: "#fff", lineHeight: 1.4, margin: 0, maxWidth: "80%" }}>
-            {scene.text}
-          </p>
-        </div>
-      </AbsoluteFill>
-    );
-  }
-
-  // Outro
-  return (
-    <AbsoluteFill style={{ backgroundColor: bgColor, justifyContent: "center", alignItems: "center" }}>
-      {imageUrl && (
-        <div style={{ width: 100, height: 100, marginBottom: 30, opacity: fadeIn }}>
-          <SafeImg src={imageUrl} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-        </div>
-      )}
-      <div style={{ opacity: fadeIn, transform: `translateY(${slideUp}px)`, textAlign: "center" }}>
-        <p style={{ fontSize: 40, fontWeight: 700, color: "#fff", lineHeight: 1.3, margin: 0 }}>
-          {scene.text}
-        </p>
+        <KineticText
+          text={scene.text}
+          start={fps * 0.5}
+          mode="word"
+          stagger={4}
+          perItemDuration={18}
+          riseDistance={30}
+          style={{ maxWidth: "82%" }}
+          itemStyle={{
+            fontSize: 38,
+            fontWeight: 500,
+            color: "#fff",
+            fontStyle: "italic",
+            lineHeight: 1.5,
+            textShadow: "0 2px 20px rgba(0,0,0,0.4)",
+          }}
+        />
       </div>
-    </AbsoluteFill>
+      <NoiseOverlay opacity={0.06} />
+    </SceneLifecycle>
   );
+}
+
+// ── Rating — 5 stars pop in one by one with bounce ──
+function RatingScene({ scene, brand }: { scene: any; brand: any }) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const durationFrames = scene.duration_s * fps;
+  const bg = brand.primary_color || "#101828";
+
+  return (
+    <SceneLifecycle
+      durationInFrames={durationFrames}
+      enter="fade"
+      exit="fade"
+      style={{
+        background: `radial-gradient(ellipse at center, #1a2440 0%, ${bg} 70%)`,
+      }}
+    >
+      <GradientOrbs
+        colors={["#FFD70022", `${bg}`, "#ffffff10"]}
+        count={3}
+        seed={scene.id + 21}
+      />
+      <GlowPulse color="#FFD700" size={600} intensityMax={0.3} />
+
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "5% 6%",
+          textAlign: "center",
+        }}
+      >
+        {/* Stars */}
+        <div style={{ display: "flex", gap: 14, marginBottom: 44 }}>
+          {[0, 1, 2, 3, 4].map((i) => {
+            const start = 4 + i * 6;
+            const p = easeOutBack(progress(frame, start, start + 18));
+            return (
+              <div
+                key={i}
+                style={{
+                  fontSize: 80,
+                  color: "#FFD700",
+                  textShadow: "0 0 40px #FFD700, 0 4px 20px rgba(0,0,0,0.4)",
+                  opacity: p,
+                  transform: `scale(${Math.max(0, p)}) rotate(${(1 - p) * -25}deg)`,
+                }}
+              >
+                ★
+              </div>
+            );
+          })}
+        </div>
+        <KineticText
+          text={scene.text}
+          start={fps * 1.2}
+          stagger={3}
+          perItemDuration={16}
+          style={{ maxWidth: "85%" }}
+          itemStyle={{
+            fontSize: 42,
+            fontWeight: 800,
+            color: "#fff",
+            lineHeight: 1.2,
+            textShadow: "0 4px 24px rgba(0,0,0,0.4)",
+          }}
+        />
+      </div>
+      <NoiseOverlay opacity={0.06} />
+    </SceneLifecycle>
+  );
+}
+
+// ── Outro — logo + CTA ──
+function OutroScene({
+  scene,
+  brand,
+  assetUrls,
+}: {
+  scene: any;
+  brand: any;
+  assetUrls: Record<string, string>;
+}) {
+  const { fps } = useVideoConfig();
+  const durationFrames = scene.duration_s * fps;
+  const bg = brand.primary_color || "#101828";
+  const imageUrl = firstUrl(scene, assetUrls);
+  const logoSpring = usePopIn(0, { damping: 12, stiffness: 140 });
+
+  return (
+    <SceneLifecycle
+      durationInFrames={durationFrames}
+      enter="zoom"
+      exit="fade"
+      style={{
+        background: `linear-gradient(180deg, ${bg} 0%, #000 100%)`,
+      }}
+    >
+      <GradientOrbs colors={["#ffffff22", `${bg}`]} count={3} seed={scene.id + 31} />
+      <GlowPulse color="#ffffff" size={700} intensityMax={0.35} />
+
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "8% 6%",
+          textAlign: "center",
+        }}
+      >
+        {imageUrl && (
+          <div
+            style={{
+              width: 130,
+              height: 130,
+              marginBottom: 36,
+              transform: `scale(${interpolate(logoSpring, [0, 1], [0.3, 1])})`,
+              filter: "drop-shadow(0 0 40px rgba(255,255,255,0.35))",
+            }}
+          >
+            <SafeImg src={imageUrl} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+          </div>
+        )}
+        <KineticText
+          text={scene.text}
+          start={6}
+          stagger={4}
+          perItemDuration={18}
+          style={{ marginBottom: 40, maxWidth: "90%" }}
+          itemStyle={{
+            fontSize: 50,
+            fontWeight: 900,
+            color: "#fff",
+            lineHeight: 1.15,
+            letterSpacing: -0.5,
+            textShadow: "0 6px 30px rgba(0,0,0,0.5)",
+          }}
+        />
+        <CTAButton text="Nous rejoindre" bg="#ffffff" color={bg} startFrame={fps * 1.1} />
+      </div>
+      <NoiseOverlay opacity={0.07} />
+    </SceneLifecycle>
+  );
+}
+
+// Dispatcher
+function TestimonialSceneDispatch({
+  scene,
+  brand,
+  assetUrls,
+}: {
+  scene: any;
+  brand: any;
+  assetUrls: Record<string, string>;
+}) {
+  switch (scene.type) {
+    case "hero":
+      return <IntroScene scene={scene} brand={brand} />;
+    case "testimonial":
+    case "feature_list":
+      return <QuoteScene scene={scene} brand={brand} assetUrls={assetUrls} />;
+    case "demo":
+    case "carousel":
+      return <RatingScene scene={scene} brand={brand} />;
+    case "outro":
+      return <OutroScene scene={scene} brand={brand} assetUrls={assetUrls} />;
+    default:
+      return <IntroScene scene={scene} brand={brand} />;
+  }
 }
 
 export const Testimonial: React.FC<TestimonialProps> = ({ scenes, brand, assetUrls }) => {
@@ -113,12 +380,12 @@ export const Testimonial: React.FC<TestimonialProps> = ({ scenes, brand, assetUr
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
       {scenes.map((scene) => {
-        const durationFrames = scene.duration_s * fps;
+        const durationFrames = Math.max(1, Math.round(scene.duration_s * fps));
         const from = frameOffset;
         frameOffset += durationFrames;
         return (
           <Sequence key={scene.id} from={from} durationInFrames={durationFrames}>
-            <TestimonialScene scene={scene} brand={brand} assetUrls={assetUrls} fps={fps} />
+            <TestimonialSceneDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
           </Sequence>
         );
       })}

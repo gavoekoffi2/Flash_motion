@@ -72,7 +72,7 @@ export default function StoryboardEditor({ storyboard, assets = [], onSave, savi
       type: "feature_list",
       text: "Nouveau texte ici.",
       assets: [],
-      animation: "fade_in_up",
+      animation: "kinetic_typography",
       audio_clip: null,
       tts_instruction: null,
     };
@@ -106,7 +106,26 @@ export default function StoryboardEditor({ storyboard, assets = [], onSave, savi
 
   const totalDuration = data.scenes.reduce((sum, s) => sum + s.duration_s, 0);
 
-  const animationOptions = ["fade_in_up", "slide_left", "slide_right", "zoom_in", "bounce", "scale_up", "fade_out"];
+  const animationOptions = [
+    "kinetic_typography",
+    "cinematic_zoom",
+    "parallax_pan",
+    "mask_reveal",
+    "spring_pop",
+    "perspective_tilt",
+    "float_hover",
+    "glow_pulse",
+    "shimmer_sweep",
+    "word_stagger",
+    "particle_drift",
+    "fade_in_up",
+    "slide_left",
+    "slide_right",
+    "zoom_in",
+    "bounce",
+    "scale_up",
+    "fade_out",
+  ];
   const typeOptions = ["hero", "carousel", "feature_list", "demo", "outro"];
   const placementOptions = ["center", "left", "right", "background"];
   const scaleOptions = ["cover", "contain", "fill"];

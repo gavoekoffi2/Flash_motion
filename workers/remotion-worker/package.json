@@ -6,7 +6,7 @@
     "dev": "tsx watch src/worker.ts",
     "build": "tsc",
     "start": "node dist/worker.js",
-    "render:test": "npx remotion render src/compositions/index.ts HeroPromo --output test-output.mp4",
+    "render:test": "npx remotion render src/compositions/index.tsx HeroPromo --output test-output.mp4",
     "test": "echo \"Tests pending\""
   },
   "dependencies": {
