@@ -115,6 +115,10 @@ services:
       LLM_MODE: ${LLM_MODE:-auto}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-mistralai/mistral-7b-instruct}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      TTS_ENGINE: ${TTS_ENGINE:-none}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000/api/health"]
       interval: 15s

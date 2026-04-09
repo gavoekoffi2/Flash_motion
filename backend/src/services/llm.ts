@@ -210,6 +210,56 @@ async function callOpenRouter(messages: { role: string; content: string }[]): Pr
   return content;
 }
 
+// ── Gemini (Google AI Studio) call ──
+async function callGemini(messages: { role: string; content: string }[]): Promise<string> {
+  if (!env.geminiApiKey) {
+    throw new Error("Gemini API key is not configured (GEMINI_API_KEY is empty).");
+  }
+
+  // Gemini's API takes a single contents array. Convert chat-style messages:
+  // put the system message as systemInstruction, user messages as contents.
+  const system = messages.find((m) => m.role === "system")?.content;
+  const userParts = messages
+    .filter((m) => m.role !== "system")
+    .map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env.geminiModel)}:generateContent?key=${env.geminiApiKey}`;
+
+  const res = await fetchWithTimeout(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
+      contents: userParts,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 2048,
+        responseMimeType: "application/json",
+      },
+    }),
+  }, LLM_TIMEOUT_MS);
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Gemini HTTP ${res.status}: ${body.slice(0, 300)}`);
+  }
+
+  const data = await res.json() as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+    promptFeedback?: { blockReason?: string };
+  };
+
+  if (data?.promptFeedback?.blockReason) {
+    throw new Error(`Gemini blocked the prompt: ${data.promptFeedback.blockReason}`);
+  }
+
+  const content = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("").trim();
+  if (!content) {
+    throw new Error("Gemini returned an empty response — no candidates[0].content.parts[].text");
+  }
+  return content;
+}
+
 // ── Ollama call ──
 async function callOllama(messages: { role: string; content: string }[]): Promise<string> {
   const res = await fetchWithTimeout(`${env.ollamaUrl}/api/chat`, {
@@ -236,30 +286,49 @@ async function callOllama(messages: { role: string; content: string }[]): Promis
   return content;
 }
 
-// ── Unified LLM call with fallback ──
+// ── Unified LLM call with fallback chain ──
+// Mode priorities:
+//   "gemini"     → Gemini only
+//   "openrouter" → OpenRouter only
+//   "ollama"     → Ollama only
+//   "auto"       → Gemini → OpenRouter → Ollama (first configured provider wins,
+//                  fallback to the next on failure)
 async function callLLM(messages: { role: string; content: string }[]): Promise<string> {
-  if (env.llmMode === "openrouter" || (env.llmMode === "auto" && env.openrouterApiKey)) {
+  if (env.llmMode === "gemini") return callGemini(messages);
+  if (env.llmMode === "openrouter") return callOpenRouter(messages);
+  if (env.llmMode === "ollama") return callOllama(messages);
+
+  // auto: try in order of configured keys
+  const errors: string[] = [];
+
+  if (env.geminiApiKey) {
     try {
-      return await callOpenRouter(messages);
+      return await callGemini(messages);
     } catch (err) {
-      if (env.llmMode === "auto") {
-        console.warn("[LLM] OpenRouter failed, falling back to Ollama:", (err as Error).message);
-        try {
-          return await callOllama(messages);
-        } catch (ollamaErr) {
-          throw new Error(
-            `Both LLM providers failed.\n` +
-            `OpenRouter: ${(err as Error).message}\n` +
-            `Ollama: ${(ollamaErr as Error).message}\n` +
-            `Configure OPENROUTER_API_KEY or ensure Ollama is running.`
-          );
-        }
-      }
-      throw err;
+      console.warn("[LLM] Gemini failed, trying next provider:", (err as Error).message);
+      errors.push(`Gemini: ${(err as Error).message}`);
     }
   }
 
-  return await callOllama(messages);
+  if (env.openrouterApiKey) {
+    try {
+      return await callOpenRouter(messages);
+    } catch (err) {
+      console.warn("[LLM] OpenRouter failed, trying next provider:", (err as Error).message);
+      errors.push(`OpenRouter: ${(err as Error).message}`);
+    }
+  }
+
+  try {
+    return await callOllama(messages);
+  } catch (err) {
+    errors.push(`Ollama: ${(err as Error).message}`);
+  }
+
+  throw new Error(
+    `All LLM providers failed.\n${errors.join("\n")}\n` +
+    `Configure GEMINI_API_KEY, OPENROUTER_API_KEY, or ensure Ollama is running.`,
+  );
 }
 
 // ── Extract JSON from LLM response (handles markdown fences) ──

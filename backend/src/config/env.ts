@@ -39,11 +39,13 @@ export const env = {
   s3Bucket: process.env.S3_BUCKET || "flash-motion",
   s3Region: process.env.S3_REGION || "us-east-1",
 
-  llmMode: (process.env.LLM_MODE || "auto") as "openrouter" | "ollama" | "auto",
+  llmMode: (process.env.LLM_MODE || "auto") as "openrouter" | "ollama" | "gemini" | "auto",
   openrouterApiKey: process.env.OPENROUTER_API_KEY || "",
   openrouterModel: process.env.OPENROUTER_MODEL || "mistralai/mistral-7b-instruct",
   ollamaUrl: process.env.OLLAMA_URL || "http://localhost:11434",
   ollamaModel: process.env.OLLAMA_MODEL || "mistral",
+  geminiApiKey: process.env.GEMINI_API_KEY || "",
+  geminiModel: process.env.GEMINI_MODEL || "gemini-2.0-flash",
 
   // TTS
   ttsEngine: (process.env.TTS_ENGINE || "none") as "none" | "elevenlabs" | "piper",
