@@ -13,7 +13,19 @@ router.use(authMiddleware);
 
 // ── Validation schemas ──
 
-const VALID_TEMPLATES = ["HeroPromo", "Testimonial", "EcommerceShowcase", "Educational", "SaasLaunch"] as const;
+const VALID_TEMPLATES = [
+  "HeroPromo",
+  "Testimonial",
+  "EcommerceShowcase",
+  "Educational",
+  "SaasLaunch",
+  "CinematicReels",
+  "NeonCyberpunk",
+  "RestaurantMenu",
+  "FitnessMotivation",
+  "RealEstateTour",
+  "EventCountdown",
+] as const;
 
 const createProjectSchema = z.object({
   title: z.string().min(1).max(200),
@@ -293,6 +305,7 @@ router.post("/:id/generate-storyboard", async (req: Request, res: Response) => {
       project.script,
       assetList,
       project.aspectRatio,
+      project.template,
     );
 
     await prisma.project.update({

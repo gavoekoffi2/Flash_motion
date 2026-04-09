@@ -50,27 +50,56 @@ const llmStoryboardSchema = z.object({
   caption_short: z.string().max(280).default(""),
 });
 
-const SYSTEM_PROMPT = `You are a senior After Effects motion designer writing a JSON storyboard for an automated cinematic video engine.
+// ── Per-template style guidance — each template has a distinct visual/tonal identity ──
+// The Remotion engine renders any scene type with every template, but tailoring the copy
+// to the template's mood dramatically improves perceived quality.
+const TEMPLATE_STYLE_GUIDE: Record<string, string> = {
+  HeroPromo:
+    "Modern marketing promo. Bold product claims, benefit-driven headlines, confident CTA. Colors: vibrant brand (#FF6B35 default). Tone: energetic, aspirational.",
+  Testimonial:
+    "Customer trust & social proof. Hero = credibility hook, feature_list = short quote (≤ 20 words, in italics), demo = star rating + result, outro = 'Join them' CTA. Tone: warm, authentic, human. Use first-person quotes.",
+  EcommerceShowcase:
+    "Product showcase for e-commerce. Hero = product name + hook, carousel = list of 3-4 products with prices, feature_list = key benefits, demo = unboxing moment, outro = 'Shop now' CTA. Tone: desirable, urgent. Include prices (€/$) and discounts when possible.",
+  Educational:
+    "Step-by-step tutorial. Hero = 'How to X in Y steps', feature_list = numbered steps (use '•' separator, max 5 steps), demo = concrete example, outro = 'Learn more'. Tone: clear, instructive, friendly. Start each step with an action verb.",
+  SaasLaunch:
+    "SaaS / tech product launch. Hero = bold product name + one-line value prop, feature_list = 3 killer features, demo = dashboard screenshot, outro = 'Start free trial'. Tone: confident, technical but clear. Default color #4f46e5. Use tech vocabulary (faster, smarter, integrate, automate).",
+  CinematicReels:
+    "Cinematic short-film aesthetic (letterbox, film grain, serif). Hero = evocative one-liner (≤ 6 words), feature_list = 3 poetic beats, demo = moody image caption, outro = production title card. Tone: mysterious, poetic, premium. Use sensory verbs (glimpse, whisper, unfold). Short sentences only. Default color #0b0806.",
+  NeonCyberpunk:
+    "Futuristic cyberpunk aesthetic (neon cyan/magenta, glitch, scanlines). Hero = hacked/terminal style headline (ALL CAPS OK), feature_list = system features (e.g. '• NEURAL LINK ACTIVE'), demo = product/interface as a 'system', outro = 'ENTER THE GRID' CTA. Tone: edgy, techno, sci-fi. Vocab: protocol, override, signal, grid, future. Default color #00f0ff.",
+  RestaurantMenu:
+    "Fine dining / gastronomy. Hero = restaurant name + cuisine type, feature_list = 3-4 signature dishes (use '•' separator, each with short poetic description), demo = dish highlight with price, outro = 'Réservez votre table'. Tone: refined, sensory (taste, aroma, texture). Use French gastronomy vocabulary. Default color #c9a961 (gold).",
+  FitnessMotivation:
+    "High-energy fitness / sport motivation. Hero = punchy motivational hook (≤ 5 words, imperative), feature_list = 3 workout benefits or challenges, demo = transformation/result statement, outro = 'Join the movement' CTA. Tone: explosive, imperative, hyped. ALL CAPS acceptable. Use action verbs (crush, push, dominate, transform). Default color #ff0033.",
+  RealEstateTour:
+    "Luxury real estate tour. Hero = property type + location, feature_list = 3-4 premium features (surface, rooms, view, amenities), demo = highlight room + price, outro = 'Visitez maintenant' CTA. Tone: elegant, aspirational, premium. Use numbers (m², bedrooms, €). Default color #0a1f44 (navy).",
+  EventCountdown:
+    "Festive event announcement with countdown vibe. Hero = event name + date, feature_list = 3 attractions (lineup, activities, perks), demo = location + time, outro = 'Grab your tickets' CTA. Tone: excited, celebratory, urgent. Use time words (tonight, soon, last chance). Default color #6d28d9 (purple).",
+};
+
+const SYSTEM_PROMPT_BASE = `You are a senior After Effects motion designer writing a JSON storyboard for an automated cinematic video engine.
 The engine renders kinetic typography, particle fields, animated gradients, 3D perspective tilts, parallax Ken-Burns, glow pulses,
-spring-based pop-ins and masked reveals — each scene is a short but polished motion graphic.
+spring-based pop-ins, masked reveals and crossfade transitions between every scene — each scene is a short but polished motion graphic.
 
 Hard rules:
 - Output ONLY valid JSON (no markdown fences, no prose, no trailing commas).
 - Each scene.text must be ≤ 160 characters and written as ONE impactful idea (headline, benefit, quote, CTA).
   Do NOT write long paragraphs — the engine animates text word-by-word, so short & punchy reads best.
 - When listing features/benefits, separate them with "•" so the engine can stagger each one.
-- Total duration: 15–45 seconds. Each scene: 2.5–5 seconds (hero & outro can go up to 6s).
+- Total duration: 18–40 seconds. Each scene: 3–5 seconds (hero & outro can go up to 6s).
 - Build 4–6 scenes total with a clear narrative arc: HOOK → VALUE → PROOF → CTA.
+- Use ALL four scene types across the storyboard for visual variety — never repeat "hero" more than once.
 - Reference uploaded asset IDs in scenes[].assets[].id. If no relevant asset, leave assets empty.
 
-Supported scene types (each has its own cinematic treatment):
-- "hero":         opening hook — large headline, animated gradient + particles, kinetic title. Use for intros.
-- "carousel":     3–4 image grid with 3D tilted staggered entrance. Use to showcase multiple products/features.
-- "feature_list": bulleted benefits list with staggered card reveal (use "•" separators in text).
-- "demo":         product/app screenshot with 3D perspective tilt + subtle float. Use for showing the thing in action.
+Supported scene types (each has its own cinematic treatment per template):
+- "hero":         opening hook — large headline, animated gradient + particles, kinetic title. Use ONCE at start.
+- "carousel":     3–4 item grid with 3D tilted staggered entrance. Use to showcase multiple things.
+- "feature_list": bulleted benefits/features/quotes with staggered card reveal. Use "•" separators in text.
+- "demo":         screenshot / product shot with 3D perspective tilt + subtle float. Use for showing the thing in action.
 - "outro":        closing CTA with logo pop-in, glow pulse, shimmering button. Always finish with this.
 
-Supported animation hints (engine uses these as flavor cues — any of these is valid):
+Supported animation hints (any of these is valid):
   kinetic_typography, cinematic_zoom, parallax_pan, mask_reveal, particle_drift,
   spring_pop, perspective_tilt, float_hover, glow_pulse, shimmer_sweep,
   word_stagger, bounce_in, scale_up, fade_in_up, slide_left, slide_right.
@@ -78,12 +107,12 @@ Supported animation hints (engine uses these as flavor cues — any of these is 
 Writing guidelines for scene.text:
 - Use strong verbs, numbers, and concrete nouns.
 - Avoid filler words ("just", "very", "really").
-- Write in the language of the user's script.
+- Write in the same language as the user's script.
 - Hero text = a hook (≤ 8 words ideal).
 - Outro text = a CTA promise (≤ 8 words ideal).
 
 Other fields:
-- brand.primary_color: extract/infer from context (hex). Default "#0b0f1f" for dark premium, "#4f46e5" for SaaS, "#FF6B35" for e-commerce.
+- brand.primary_color: infer from template style guide below, or extract from script context (hex).
 - caption_short: ≤ 240 chars social caption with 1–3 emoji max.
 - aspect_ratio: "9:16" (Shorts/Reels), "16:9" (YouTube/landing), "1:1" (feed).
 - tts_instruction: optional short voice direction (e.g. "energetic", "calm", "authoritative"). null if unsure.
@@ -105,6 +134,16 @@ JSON schema:
   "brand": { "primary_color": string, "logo_id": string | null },
   "caption_short": string
 }`;
+
+function buildSystemPrompt(template: string | undefined): string {
+  const guide = (template && TEMPLATE_STYLE_GUIDE[template]) || TEMPLATE_STYLE_GUIDE.HeroPromo;
+  return `${SYSTEM_PROMPT_BASE}
+
+═══ SELECTED TEMPLATE: ${template || "HeroPromo"} ═══
+${guide}
+
+Tailor every scene.text to match this template's tone, vocabulary and style. The visual rendering is already handled by the engine — your job is to write copy that SOUNDS like this template's world.`;
+}
 
 function buildUserPrompt(script: string, assetIds: { id: string; type: string; filename: string }[], aspectRatio: string): string {
   const assetList = assetIds.length > 0
@@ -239,9 +278,10 @@ export async function generateStoryboard(
   script: string,
   assets: { id: string; type: string; filename: string }[],
   aspectRatio: string,
+  template?: string,
 ): Promise<Storyboard> {
   const messages = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: buildSystemPrompt(template) },
     { role: "user", content: buildUserPrompt(script, assets, aspectRatio) },
   ];
 
