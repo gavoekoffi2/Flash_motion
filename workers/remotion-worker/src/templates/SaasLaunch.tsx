@@ -6,6 +6,7 @@ import {
   useVideoConfig,
   interpolate,
 } from "remotion";
+import { useMemo } from "react";
 import {
   SafeImg,
   SceneLifecycle,
@@ -24,6 +25,8 @@ import {
   easeOutBack,
   progress,
   buildSceneSequences,
+  firstAssetUrl,
+  splitToLines,
 } from "../utils/motion";
 
 export interface SaasLaunchProps {
@@ -35,12 +38,6 @@ export interface SaasLaunchProps {
 const GRAD_START = "#4f46e5"; // indigo-600
 const GRAD_END = "#9333ea"; // purple-600
 const ACCENT = "#a78bfa"; // violet-400
-
-function firstUrl(scene: any, assetUrls: Record<string, string>): string | null {
-  const a = scene.assets?.[0];
-  if (!a) return null;
-  return a.url || (a.id ? assetUrls[a.id] : null) || null;
-}
 
 // ── Hero — big headline on animated gradient ──
 function SaasHero({
@@ -55,7 +52,7 @@ function SaasHero({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || "#0b1024";
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const logoSpring = usePopIn(5, { damping: 12, stiffness: 140 });
   const float = useFloat(8, 3.5);
 
@@ -142,7 +139,7 @@ function SaasDemo({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || "#0b1024";
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const tilt = usePerspectiveSettle(0, 32, 14);
   const float = useFloat(8, 3.8);
   const scaleP = easeOutExpo(progress(frame, 0, 26));
@@ -221,12 +218,8 @@ function SaasFeatures({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || "#0b1024";
-  const imageUrl = firstUrl(scene, assetUrls);
-  const lines = scene.text
-    .split(/[•·\n]+|(?<=[.!?])\s+/)
-    .map((s: string) => s.trim())
-    .filter((s: string) => s.length > 0)
-    .slice(0, 5);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
+  const lines = useMemo(() => splitToLines(scene.text, 5), [scene.text]);
   const showLines = lines.length > 0 ? lines : [scene.text];
 
   return (
@@ -444,7 +437,7 @@ function SaasOutro({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || "#0b1024";
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const logoSpring = usePopIn(0);
 
   return (

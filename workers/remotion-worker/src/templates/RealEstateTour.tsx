@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   AbsoluteFill,
   Sequence,
@@ -16,10 +16,11 @@ import {
   CTAButton,
   useKenBurns,
   usePopIn,
-  useFloat,
   easeOutExpo,
   progress,
   buildSceneSequences,
+  firstAssetUrl,
+  splitToLines,
 } from "../utils/motion";
 
 export interface RealEstateTourProps {
@@ -31,14 +32,7 @@ export interface RealEstateTourProps {
 const NAVY = "#0a1f44";
 const NAVY_DARK = "#050f26";
 const GOLD = "#d4af37";
-const GOLD_LIGHT = "#f0d67c";
 const CREAM = "#f5efe0";
-
-function firstUrl(scene: any, assetUrls: Record<string, string>): string | null {
-  const a = scene.assets?.[0];
-  if (!a) return null;
-  return a.url || (a.id ? assetUrls[a.id] : null) || null;
-}
 
 // ── Gold corner accents for luxury feel ──
 function CornerAccents({ startFrame = 0 }: { startFrame?: number }) {
@@ -137,7 +131,7 @@ function EstateHero({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const burns = useKenBurns(durationFrames, 0.13);
 
   return (
@@ -234,7 +228,7 @@ function EstateRoom({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const burns = useKenBurns(durationFrames, 0.11);
 
   return (
@@ -327,12 +321,8 @@ function EstateSpecs({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
-  const lines = scene.text
-    .split(/[•·\n]+|(?<=[.!?])\s+/)
-    .map((s: string) => s.trim())
-    .filter((s: string) => s.length > 0)
-    .slice(0, 4);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
+  const lines = useMemo(() => splitToLines(scene.text, 4), [scene.text]);
 
   return (
     <SceneLifecycle
@@ -447,7 +437,7 @@ function EstateOutro({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const logoSpring = usePopIn(4);
 
   return (

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   AbsoluteFill,
   Sequence,
@@ -15,11 +15,12 @@ import {
   AnimatedUnderline,
   CTAButton,
   useKenBurns,
-  useFloat,
   usePopIn,
   easeOutExpo,
   progress,
   buildSceneSequences,
+  firstAssetUrl,
+  splitToLines,
 } from "../utils/motion";
 
 export interface CinematicReelsProps {
@@ -30,12 +31,6 @@ export interface CinematicReelsProps {
 
 const AMBER = "#e8a33d";
 const DEEP = "#0b0806";
-
-function firstUrl(scene: any, assetUrls: Record<string, string>): string | null {
-  const a = scene.assets?.[0];
-  if (!a) return null;
-  return a.url || (a.id ? assetUrls[a.id] : null) || null;
-}
 
 // ── Cinematic letterbox bars — animate in from top/bottom ──
 function LetterboxBars({ barRatio = 0.1 }: { barRatio?: number }) {
@@ -116,7 +111,7 @@ function CinematicHero({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || DEEP;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const burns = useKenBurns(durationFrames, 0.15);
 
   return (
@@ -236,7 +231,7 @@ function CinematicShot({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || DEEP;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const burns = useKenBurns(durationFrames, 0.08);
 
   return (
@@ -319,12 +314,8 @@ function CinematicList({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || DEEP;
-  const imageUrl = firstUrl(scene, assetUrls);
-  const lines = scene.text
-    .split(/[•·\n]+|(?<=[.!?])\s+/)
-    .map((s: string) => s.trim())
-    .filter((s: string) => s.length > 0)
-    .slice(0, 4);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
+  const lines = useMemo(() => splitToLines(scene.text, 4), [scene.text]);
 
   return (
     <SceneLifecycle
@@ -420,7 +411,7 @@ function CinematicOutro({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || DEEP;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const logoSpring = usePopIn(4);
 
   return (

@@ -643,5 +643,30 @@ export function buildSceneSequences<
   return result;
 }
 
+// ═══════════════════════════════════════════════════════════════════
+//  ASSET URL RESOLVER — scene.assets[0] → resolved URL (or null)
+// ═══════════════════════════════════════════════════════════════════
+export function firstAssetUrl(
+  scene: any,
+  assetUrls: Record<string, string>,
+): string | null {
+  const a = scene.assets?.[0];
+  if (!a) return null;
+  return a.url || (a.id ? assetUrls[a.id] : null) || null;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  TEXT SPLITTING — break scene text into lines on bullets + sentences
+// ═══════════════════════════════════════════════════════════════════
+const LINE_SPLIT_REGEX = /[•·\n]+|(?<=[.!?])\s+/;
+
+export function splitToLines(text: string, limit = 4): string[] {
+  return text
+    .split(LINE_SPLIT_REGEX)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .slice(0, limit);
+}
+
 // Re-export for templates
 export { easeOutCubic, easeOutExpo, easeOutQuart, easeOutBack, progress, impulse };

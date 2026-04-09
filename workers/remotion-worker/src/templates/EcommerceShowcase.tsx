@@ -6,6 +6,7 @@ import {
   useVideoConfig,
   interpolate,
 } from "remotion";
+import { useMemo } from "react";
 import {
   SafeImg,
   SceneLifecycle,
@@ -23,18 +24,14 @@ import {
   easeOutBack,
   progress,
   buildSceneSequences,
+  firstAssetUrl,
+  splitToLines,
 } from "../utils/motion";
 
 export interface EcommerceShowcaseProps {
   scenes: any[];
   brand: { primary_color: string; logo_id: string | null };
   assetUrls: Record<string, string>;
-}
-
-function firstUrl(scene: any, assetUrls: Record<string, string>): string | null {
-  const a = scene.assets?.[0];
-  if (!a) return null;
-  return a.url || (a.id ? assetUrls[a.id] : null) || null;
 }
 
 const ACCENT = "#FF6B35";
@@ -53,7 +50,7 @@ function ProductHero({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || "#0a0a0a";
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const float = useFloat(10, 3);
   const productSpring = usePopIn(2, { damping: 14, stiffness: 110 });
   const scale = interpolate(productSpring, [0, 1], [0.78, 1]);
@@ -264,13 +261,9 @@ function FeatureList({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || "#0a0a0a";
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const burns = useKenBurns(durationFrames, 0.1);
-  const lines = scene.text
-    .split(/[•·\n]+|(?<=[.!?])\s+/)
-    .map((s: string) => s.trim())
-    .filter((s: string) => s.length > 0)
-    .slice(0, 5);
+  const lines = useMemo(() => splitToLines(scene.text, 5), [scene.text]);
 
   return (
     <SceneLifecycle
@@ -363,7 +356,7 @@ function ProductDemo({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || "#0a0a0a";
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const tilt = usePerspectiveSettle(0, 30, 15);
   const float = useFloat(10, 3.5);
 
@@ -437,7 +430,7 @@ function BuyOutro({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || "#0a0a0a";
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const logoSpring = usePopIn(0);
 
   return (

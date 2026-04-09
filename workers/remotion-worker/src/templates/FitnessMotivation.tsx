@@ -18,9 +18,9 @@ import {
   usePopIn,
   useImpact,
   easeOutExpo,
-  easeOutBack,
   progress,
   buildSceneSequences,
+  firstAssetUrl,
 } from "../utils/motion";
 
 export interface FitnessMotivationProps {
@@ -33,12 +33,6 @@ const RED = "#ff0033";
 const RED_DARK = "#b8001f";
 const BLACK = "#0a0a0a";
 const YELLOW = "#ffc300";
-
-function firstUrl(scene: any, assetUrls: Record<string, string>): string | null {
-  const a = scene.assets?.[0];
-  if (!a) return null;
-  return a.url || (a.id ? assetUrls[a.id] : null) || null;
-}
 
 // ── Diagonal stripes aggressive backdrop ──
 function DiagonalStripes({ color = RED, opacity = 0.08 }: { color?: string; opacity?: number }) {
@@ -99,7 +93,7 @@ function FitHero({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const burns = useKenBurns(durationFrames, 0.18);
   const impact = useImpact(8, 14);
 
@@ -203,7 +197,7 @@ function FitStat({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const burns = useKenBurns(durationFrames, 0.08);
   const badgePop = usePopIn(5, { damping: 8, stiffness: 140 });
 
@@ -305,7 +299,7 @@ function FitOutro({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const logoSpring = usePopIn(2, { damping: 10, stiffness: 150 });
 
   return (

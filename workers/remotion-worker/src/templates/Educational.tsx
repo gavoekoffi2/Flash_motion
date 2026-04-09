@@ -22,6 +22,7 @@ import {
   easeOutBack,
   progress,
   buildSceneSequences,
+  firstAssetUrl,
 } from "../utils/motion";
 
 export interface EducationalProps {
@@ -32,12 +33,6 @@ export interface EducationalProps {
 
 const ACCENT = "#4FC3F7";
 const ACCENT_SOFT = "#4FC3F744";
-
-function firstUrl(scene: any, assetUrls: Record<string, string>): string | null {
-  const a = scene.assets?.[0];
-  if (!a) return null;
-  return a.url || (a.id ? assetUrls[a.id] : null) || null;
-}
 
 // ── Progress dots at top ──
 function ProgressDots({
@@ -103,7 +98,7 @@ function IntroScene({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || "#0a1e3c";
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const logoSpring = usePopIn(5, { damping: 14, stiffness: 110 });
 
   return (
@@ -195,7 +190,7 @@ function StepScene({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || "#0a1e3c";
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const numberSpring = usePopIn(4, { damping: 8, stiffness: 120 });
   const float = useFloat(6, 3.2);
 
@@ -316,7 +311,7 @@ function CompletionScene({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || "#0a1e3c";
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const checkSpring = usePopIn(2, { damping: 9, stiffness: 130 });
 
   return (

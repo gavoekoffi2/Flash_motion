@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   AbsoluteFill,
   Sequence,
@@ -10,7 +10,6 @@ import {
   SafeImg,
   SceneLifecycle,
   KineticText,
-  GradientOrbs,
   NoiseOverlay,
   AnimatedUnderline,
   CTAButton,
@@ -20,6 +19,8 @@ import {
   easeOutExpo,
   progress,
   buildSceneSequences,
+  firstAssetUrl,
+  splitToLines,
 } from "../utils/motion";
 
 export interface RestaurantMenuProps {
@@ -33,12 +34,6 @@ const CREAM_DARK = "#f0e6d2";
 const DARK = "#2d1810";
 const GOLD = "#c9a961";
 const GOLD_DARK = "#8a6f35";
-
-function firstUrl(scene: any, assetUrls: Record<string, string>): string | null {
-  const a = scene.assets?.[0];
-  if (!a) return null;
-  return a.url || (a.id ? assetUrls[a.id] : null) || null;
-}
 
 // ── Elegant ornament divider ──
 function Ornament({ startFrame = 0 }: { startFrame?: number }) {
@@ -101,7 +96,7 @@ function MenuHero({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const burns = useKenBurns(durationFrames, 0.12);
 
   return (
@@ -200,7 +195,7 @@ function DishScene({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const burns = useKenBurns(durationFrames, 0.1);
   const float = useFloat(4, 4);
 
@@ -298,12 +293,8 @@ function MenuList({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
-  const lines = scene.text
-    .split(/[•·\n]+|(?<=[.!?])\s+/)
-    .map((s: string) => s.trim())
-    .filter((s: string) => s.length > 0)
-    .slice(0, 4);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
+  const lines = useMemo(() => splitToLines(scene.text, 4), [scene.text]);
 
   return (
     <SceneLifecycle
@@ -417,7 +408,7 @@ function MenuOutro({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const logoSpring = usePopIn(4);
 
   return (

@@ -20,9 +20,9 @@ import {
   usePopIn,
   useFloat,
   easeOutExpo,
-  easeOutBack,
   progress,
   buildSceneSequences,
+  firstAssetUrl,
 } from "../utils/motion";
 
 export interface NeonCyberpunkProps {
@@ -35,12 +35,6 @@ const CYAN = "#00f0ff";
 const MAGENTA = "#ff00aa";
 const VIOLET = "#7a00ff";
 const INK = "#030014";
-
-function firstUrl(scene: any, assetUrls: Record<string, string>): string | null {
-  const a = scene.assets?.[0];
-  if (!a) return null;
-  return a.url || (a.id ? assetUrls[a.id] : null) || null;
-}
 
 // ── Scanlines overlay ──
 function Scanlines() {
@@ -165,7 +159,7 @@ function CyberHero({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
 
   return (
     <SceneLifecycle
@@ -263,7 +257,7 @@ function CyberFeature({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const float = useFloat(5, 3.5);
 
   return (
@@ -369,7 +363,7 @@ function CyberOutro({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const logoSpring = usePopIn(3, { damping: 10, stiffness: 150 });
 
   return (

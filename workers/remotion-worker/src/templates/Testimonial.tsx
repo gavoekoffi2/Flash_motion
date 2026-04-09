@@ -21,18 +21,13 @@ import {
   easeOutBack,
   progress,
   buildSceneSequences,
+  firstAssetUrl,
 } from "../utils/motion";
 
 export interface TestimonialProps {
   scenes: any[];
   brand: { primary_color: string; logo_id: string | null };
   assetUrls: Record<string, string>;
-}
-
-function firstUrl(scene: any, assetUrls: Record<string, string>): string | null {
-  const a = scene.assets?.[0];
-  if (!a) return null;
-  return a.url || (a.id ? assetUrls[a.id] : null) || null;
 }
 
 // ── Hero/Intro — elegant title card ──
@@ -110,7 +105,7 @@ function QuoteScene({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || "#101828";
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const quotePop = usePopIn(0, { damping: 14, stiffness: 110 });
   const float = useFloat(6, 4);
 
@@ -287,7 +282,7 @@ function OutroScene({
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
   const bg = brand.primary_color || "#101828";
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const logoSpring = usePopIn(0, { damping: 12, stiffness: 140 });
 
   return (

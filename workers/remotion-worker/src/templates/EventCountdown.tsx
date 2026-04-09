@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   AbsoluteFill,
   Sequence,
   useCurrentFrame,
   useVideoConfig,
   interpolate,
+  random,
 } from "remotion";
 import {
   SafeImg,
@@ -18,11 +19,10 @@ import {
   AnimatedUnderline,
   usePopIn,
   useFloat,
-  useCounterUp,
   easeOutExpo,
-  easeOutBack,
   progress,
   buildSceneSequences,
+  firstAssetUrl,
 } from "../utils/motion";
 
 export interface EventCountdownProps {
@@ -36,48 +36,50 @@ const PINK = "#ec4899";
 const GOLD = "#fbbf24";
 const INK = "#1a0333";
 
-function firstUrl(scene: any, assetUrls: Record<string, string>): string | null {
-  const a = scene.assets?.[0];
-  if (!a) return null;
-  return a.url || (a.id ? assetUrls[a.id] : null) || null;
-}
+const CONFETTI_COLORS = [PINK, GOLD, "#fff", PURPLE, "#06b6d4"];
 
 // ── Confetti pieces — falling colored squares ──
 function Confetti({ seed = 1 }: { seed?: number }) {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
-  const pieces = Array.from({ length: 34 }, (_, i) => {
-    const rx = ((Math.sin(i * 12.9898 + seed) * 43758.5453) % 1 + 1) % 1;
-    const ry = ((Math.sin(i * 78.233 + seed) * 22578.1459) % 1 + 1) % 1;
-    const rs = ((Math.sin(i * 3.456 + seed) * 15731.7) % 1 + 1) % 1;
-    const vy = 1.5 + rs * 3;
-    const x = rx * width + Math.sin(frame / (fps * 0.6) + i) * 60;
-    const rawY = ry * height - frame * vy;
-    const y = ((rawY % (height + 80)) + height + 80) % (height + 80);
-    const size = 6 + rs * 10;
-    const colors = [PINK, GOLD, "#fff", PURPLE, "#06b6d4"];
-    const color = colors[i % colors.length];
-    const rot = frame * (2 + rs * 4) + i * 20;
-    return { x, y, size, color, rot, i };
-  });
+  // Static per-piece seed values never change — compute once per seed.
+  const staticPieces = useMemo(
+    () =>
+      Array.from({ length: 34 }, (_, i) => ({
+        i,
+        rx: random(`conf-x-${seed}-${i}`),
+        ry: random(`conf-y-${seed}-${i}`),
+        rs: random(`conf-s-${seed}-${i}`),
+        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+      })),
+    [seed],
+  );
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-      {pieces.map((p) => (
-        <div
-          key={p.i}
-          style={{
-            position: "absolute",
-            left: p.x,
-            top: p.y,
-            width: p.size,
-            height: p.size * 0.6,
-            background: p.color,
-            transform: `rotate(${p.rot}deg)`,
-            opacity: 0.85,
-            boxShadow: `0 0 8px ${p.color}66`,
-          }}
-        />
-      ))}
+      {staticPieces.map(({ i, rx, ry, rs, color }) => {
+        const vy = 1.5 + rs * 3;
+        const x = rx * width + Math.sin(frame / (fps * 0.6) + i) * 60;
+        const rawY = ry * height - frame * vy;
+        const y = ((rawY % (height + 80)) + height + 80) % (height + 80);
+        const size = 6 + rs * 10;
+        const rot = frame * (2 + rs * 4) + i * 20;
+        return (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: x,
+              top: y,
+              width: size,
+              height: size * 0.6,
+              background: color,
+              transform: `rotate(${rot}deg)`,
+              opacity: 0.85,
+              boxShadow: `0 0 8px ${color}66`,
+            }}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -152,7 +154,7 @@ function EventHero({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
 
   return (
     <SceneLifecycle
@@ -339,7 +341,7 @@ function EventDetail({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const float = useFloat(8, 3.5);
 
   return (
@@ -418,7 +420,7 @@ function EventOutro({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const durationFrames = scene.duration_s * fps;
-  const imageUrl = firstUrl(scene, assetUrls);
+  const imageUrl = firstAssetUrl(scene, assetUrls);
   const logoSpring = usePopIn(2, { damping: 10, stiffness: 150 });
 
   return (
