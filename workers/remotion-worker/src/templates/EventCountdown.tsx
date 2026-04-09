@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import {
-  AbsoluteFill,
   Sequence,
   useCurrentFrame,
   useVideoConfig,
@@ -23,6 +22,7 @@ import {
   progress,
   buildSceneSequences,
   firstAssetUrl,
+  TemplateRoot,
 } from "../utils/motion";
 
 export interface EventCountdownProps {
@@ -524,13 +524,16 @@ export const EventCountdown: React.FC<EventCountdownProps> = ({ scenes, brand, a
   const { fps } = useVideoConfig();
   const seqs = buildSceneSequences(scenes, fps);
   return (
-    <AbsoluteFill style={{ backgroundColor: INK }}>
+    <TemplateRoot
+      backgroundColor={INK}
+      postFX={{ grain: 0.08, vignette: 0.45, warmth: 0.1, chromaticAberration: 0.3 }}
+    >
       {seqs.map(({ scene, from, durationInFrames }) => (
         <Sequence key={scene.id} from={from} durationInFrames={durationInFrames}>
           <EventDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
         </Sequence>
       ))}
-    </AbsoluteFill>
+    </TemplateRoot>
   );
 };
 

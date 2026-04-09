@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  AbsoluteFill,
   Sequence,
   useCurrentFrame,
   useVideoConfig,
@@ -23,6 +22,7 @@ import {
   progress,
   buildSceneSequences,
   firstAssetUrl,
+  TemplateRoot,
 } from "../utils/motion";
 
 export interface EducationalProps {
@@ -450,7 +450,10 @@ export const Educational: React.FC<EducationalProps> = ({ scenes, brand, assetUr
   const { fps } = useVideoConfig();
   const seqs = buildSceneSequences(scenes, fps);
   return (
-    <AbsoluteFill style={{ backgroundColor: "#000" }}>
+    <TemplateRoot
+      backgroundColor="#0a1220"
+      postFX={{ grain: 0.05, vignette: 0.35, warmth: 0.06, chromaticAberration: 0.25 }}
+    >
       {seqs.map(({ scene, from, durationInFrames }, i) => (
         <Sequence key={scene.id} from={from} durationInFrames={durationInFrames}>
           <EducationalSceneDispatch
@@ -462,7 +465,7 @@ export const Educational: React.FC<EducationalProps> = ({ scenes, brand, assetUr
           />
         </Sequence>
       ))}
-    </AbsoluteFill>
+    </TemplateRoot>
   );
 };
 

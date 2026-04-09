@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  AbsoluteFill,
   Sequence,
   useCurrentFrame,
   useVideoConfig,
@@ -22,6 +21,7 @@ import {
   progress,
   buildSceneSequences,
   firstAssetUrl,
+  TemplateRoot,
 } from "../utils/motion";
 
 export interface TestimonialProps {
@@ -374,13 +374,16 @@ export const Testimonial: React.FC<TestimonialProps> = ({ scenes, brand, assetUr
   const { fps } = useVideoConfig();
   const seqs = buildSceneSequences(scenes, fps);
   return (
-    <AbsoluteFill style={{ backgroundColor: "#000" }}>
+    <TemplateRoot
+      backgroundColor="#0b0f1f"
+      postFX={{ grain: 0.08, vignette: 0.45, warmth: 0.15, chromaticAberration: 0.3 }}
+    >
       {seqs.map(({ scene, from, durationInFrames }) => (
         <Sequence key={scene.id} from={from} durationInFrames={durationInFrames}>
           <TestimonialSceneDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
         </Sequence>
       ))}
-    </AbsoluteFill>
+    </TemplateRoot>
   );
 };
 

@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import {
-  AbsoluteFill,
   Sequence,
   useCurrentFrame,
   useVideoConfig,
@@ -21,6 +20,7 @@ import {
   buildSceneSequences,
   firstAssetUrl,
   splitToLines,
+  TemplateRoot,
 } from "../utils/motion";
 
 export interface RestaurantMenuProps {
@@ -497,13 +497,16 @@ export const RestaurantMenu: React.FC<RestaurantMenuProps> = ({ scenes, brand, a
   const { fps } = useVideoConfig();
   const seqs = buildSceneSequences(scenes, fps);
   return (
-    <AbsoluteFill style={{ backgroundColor: CREAM }}>
+    <TemplateRoot
+      backgroundColor={CREAM}
+      postFX={{ grain: 0.08, vignette: 0.45, warmth: 0.2, chromaticAberration: 0.15 }}
+    >
       {seqs.map(({ scene, from, durationInFrames }) => (
         <Sequence key={scene.id} from={from} durationInFrames={durationInFrames}>
           <MenuDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
         </Sequence>
       ))}
-    </AbsoluteFill>
+    </TemplateRoot>
   );
 };
 

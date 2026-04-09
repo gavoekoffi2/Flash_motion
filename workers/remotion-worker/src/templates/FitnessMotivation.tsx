@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  AbsoluteFill,
   Sequence,
   useCurrentFrame,
   useVideoConfig,
@@ -21,6 +20,7 @@ import {
   progress,
   buildSceneSequences,
   firstAssetUrl,
+  TemplateRoot,
 } from "../utils/motion";
 
 export interface FitnessMotivationProps {
@@ -406,13 +406,16 @@ export const FitnessMotivation: React.FC<FitnessMotivationProps> = ({ scenes, br
   const { fps } = useVideoConfig();
   const seqs = buildSceneSequences(scenes, fps);
   return (
-    <AbsoluteFill style={{ backgroundColor: BLACK }}>
+    <TemplateRoot
+      backgroundColor={BLACK}
+      postFX={{ grain: 0.12, vignette: 0.55, chromaticAberration: 0.5, warmth: 0.04 }}
+    >
       {seqs.map(({ scene, from, durationInFrames }) => (
         <Sequence key={scene.id} from={from} durationInFrames={durationInFrames}>
           <FitDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
         </Sequence>
       ))}
-    </AbsoluteFill>
+    </TemplateRoot>
   );
 };
 

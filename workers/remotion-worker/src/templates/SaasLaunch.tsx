@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  AbsoluteFill,
   Sequence,
   useCurrentFrame,
   useVideoConfig,
@@ -27,6 +26,7 @@ import {
   buildSceneSequences,
   firstAssetUrl,
   splitToLines,
+  TemplateRoot,
 } from "../utils/motion";
 
 export interface SaasLaunchProps {
@@ -530,13 +530,16 @@ export const SaasLaunch: React.FC<SaasLaunchProps> = ({ scenes, brand, assetUrls
   const { fps } = useVideoConfig();
   const seqs = buildSceneSequences(scenes, fps);
   return (
-    <AbsoluteFill style={{ backgroundColor: "#000" }}>
+    <TemplateRoot
+      backgroundColor="#0a0d1f"
+      postFX={{ grain: 0.06, vignette: 0.4, warmth: 0.05, chromaticAberration: 0.3 }}
+    >
       {seqs.map(({ scene, from, durationInFrames }) => (
         <Sequence key={scene.id} from={from} durationInFrames={durationInFrames}>
           <SaasSceneDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
         </Sequence>
       ))}
-    </AbsoluteFill>
+    </TemplateRoot>
   );
 };
 

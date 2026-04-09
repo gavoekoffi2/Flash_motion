@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  AbsoluteFill,
   Sequence,
   useCurrentFrame,
   useVideoConfig,
@@ -23,6 +22,7 @@ import {
   progress,
   buildSceneSequences,
   firstAssetUrl,
+  TemplateRoot,
 } from "../utils/motion";
 
 export interface NeonCyberpunkProps {
@@ -468,13 +468,16 @@ export const NeonCyberpunk: React.FC<NeonCyberpunkProps> = ({ scenes, brand, ass
   const { fps } = useVideoConfig();
   const seqs = buildSceneSequences(scenes, fps);
   return (
-    <AbsoluteFill style={{ backgroundColor: INK }}>
+    <TemplateRoot
+      backgroundColor={INK}
+      postFX={{ grain: 0.1, vignette: 0.6, scanlines: true, chromaticAberration: 0.8 }}
+    >
       {seqs.map(({ scene, from, durationInFrames }) => (
         <Sequence key={scene.id} from={from} durationInFrames={durationInFrames}>
           <CyberDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
         </Sequence>
       ))}
-    </AbsoluteFill>
+    </TemplateRoot>
   );
 };
 

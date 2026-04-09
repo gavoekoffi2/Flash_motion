@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import {
-  AbsoluteFill,
   Sequence,
   useCurrentFrame,
   useVideoConfig,
@@ -21,6 +20,7 @@ import {
   buildSceneSequences,
   firstAssetUrl,
   splitToLines,
+  TemplateRoot,
 } from "../utils/motion";
 
 export interface RealEstateTourProps {
@@ -538,13 +538,16 @@ export const RealEstateTour: React.FC<RealEstateTourProps> = ({ scenes, brand, a
   const { fps } = useVideoConfig();
   const seqs = buildSceneSequences(scenes, fps);
   return (
-    <AbsoluteFill style={{ backgroundColor: NAVY_DARK }}>
+    <TemplateRoot
+      backgroundColor={NAVY_DARK}
+      postFX={{ grain: 0.06, vignette: 0.4, warmth: 0.1, chromaticAberration: 0.25 }}
+    >
       {seqs.map(({ scene, from, durationInFrames }) => (
         <Sequence key={scene.id} from={from} durationInFrames={durationInFrames}>
           <EstateDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
         </Sequence>
       ))}
-    </AbsoluteFill>
+    </TemplateRoot>
   );
 };
 

@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  AbsoluteFill,
   Sequence,
   useCurrentFrame,
   useVideoConfig,
@@ -24,6 +23,12 @@ import {
   easeOutExpo,
   progress,
   buildSceneSequences,
+  TemplateRoot,
+  LightLeak,
+  LensFlare,
+  FloatingShapes,
+  TextBurst,
+  MorphingBlob,
 } from "../utils/motion";
 
 // ── Types ──
@@ -87,19 +92,50 @@ function HeroScene({
       exit="blur"
       style={{ backgroundColor: bg }}
     >
-      {/* Animated backdrop */}
+      {/* Animated backdrop — multi-layer depth */}
       <GradientOrbs
         colors={[`${bg}ee`, `${accent}22`, `${bg}cc`]}
         count={4}
         seed={scene.id}
       />
+      <div
+        style={{
+          position: "absolute",
+          left: "18%",
+          top: "25%",
+          transform: "translate(-50%, -50%)",
+        }}
+      >
+        <MorphingBlob
+          color={accent}
+          size={520}
+          opacity={0.4}
+          seed={scene.id + 3}
+        />
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          right: "-8%",
+          bottom: "18%",
+        }}
+      >
+        <MorphingBlob
+          color={bg}
+          size={460}
+          opacity={0.35}
+          seed={scene.id + 7}
+          speed={0.008}
+        />
+      </div>
+      <FloatingShapes color={`${accent}1a`} count={6} seed={scene.id + 11} />
       {imageUrl && (
         <div
           style={{
             position: "absolute",
             inset: 0,
             ...burns,
-            filter: "brightness(0.45) saturate(1.1)",
+            filter: "brightness(0.45) saturate(1.15) contrast(1.08)",
           }}
         >
           <SafeImg
@@ -119,6 +155,9 @@ function HeroScene({
       <ParticleField count={35} seed={scene.id} maxSize={5} />
       <GlowPulse color={accent} size={700} intensityMax={0.25} />
 
+      {/* Cinematic light sweep during entry */}
+      <LightLeak startFrame={2} duration={40} color={`${accent}70`} />
+
       {/* Foreground content */}
       <div
         style={{
@@ -132,13 +171,11 @@ function HeroScene({
           textAlign: "center",
         }}
       >
-        <KineticText
+        <TextBurst
           text={scene.text}
           start={6}
-          stagger={4}
-          perItemDuration={20}
-          riseDistance={50}
-          style={{ maxWidth: "88%" }}
+          duration={28}
+          style={{ maxWidth: "92%" }}
           itemStyle={{
             fontSize: 62,
             fontWeight: 900,
@@ -166,6 +203,9 @@ function HeroScene({
           />
         </div>
       </div>
+
+      {/* Anamorphic flare after entry */}
+      <LensFlare x={50} y={42} startFrame={fps * 1.0} duration={32} />
 
       <NoiseOverlay opacity={0.08} />
     </SceneLifecycle>
@@ -612,13 +652,16 @@ export const HeroPromo: React.FC<HeroPromoProps> = ({ scenes, brand, assetUrls }
   const { fps } = useVideoConfig();
   const seqs = buildSceneSequences(scenes, fps);
   return (
-    <AbsoluteFill style={{ backgroundColor: "#000" }}>
+    <TemplateRoot
+      backgroundColor="#000"
+      postFX={{ grain: 0.1, vignette: 0.55, warmth: 0.1, chromaticAberration: 0.45 }}
+    >
       {seqs.map(({ scene, from, durationInFrames }) => (
         <Sequence key={scene.id} from={from} durationInFrames={durationInFrames}>
           <SceneRenderer scene={scene} brand={brand} assetUrls={assetUrls} />
         </Sequence>
       ))}
-    </AbsoluteFill>
+    </TemplateRoot>
   );
 };
 

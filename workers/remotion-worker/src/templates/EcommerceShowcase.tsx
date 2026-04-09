@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  AbsoluteFill,
   Sequence,
   useCurrentFrame,
   useVideoConfig,
@@ -26,6 +25,7 @@ import {
   buildSceneSequences,
   firstAssetUrl,
   splitToLines,
+  TemplateRoot,
 } from "../utils/motion";
 
 export interface EcommerceShowcaseProps {
@@ -525,13 +525,16 @@ export const EcommerceShowcase: React.FC<EcommerceShowcaseProps> = ({
   const { fps } = useVideoConfig();
   const seqs = buildSceneSequences(scenes, fps);
   return (
-    <AbsoluteFill style={{ backgroundColor: "#000" }}>
+    <TemplateRoot
+      backgroundColor="#0a0a0f"
+      postFX={{ grain: 0.07, vignette: 0.4, warmth: 0.12, chromaticAberration: 0.35 }}
+    >
       {seqs.map(({ scene, from, durationInFrames }) => (
         <Sequence key={scene.id} from={from} durationInFrames={durationInFrames}>
           <EcommerceSceneDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
         </Sequence>
       ))}
-    </AbsoluteFill>
+    </TemplateRoot>
   );
 };
 

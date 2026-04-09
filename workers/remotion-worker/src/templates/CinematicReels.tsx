@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import {
-  AbsoluteFill,
   Sequence,
   useCurrentFrame,
   useVideoConfig,
@@ -21,6 +20,10 @@ import {
   buildSceneSequences,
   firstAssetUrl,
   splitToLines,
+  TemplateRoot,
+  LightLeak,
+  LensFlare,
+  CinematicBars,
 } from "../utils/motion";
 
 export interface CinematicReelsProps {
@@ -519,13 +522,22 @@ export const CinematicReels: React.FC<CinematicReelsProps> = ({ scenes, brand, a
   const { fps } = useVideoConfig();
   const seqs = buildSceneSequences(scenes, fps);
   return (
-    <AbsoluteFill style={{ backgroundColor: "#000" }}>
+    <TemplateRoot
+      backgroundColor="#060402"
+      postFX={{
+        grain: 0.18,
+        vignette: 0.72,
+        warmth: 0.14,
+        chromaticAberration: 0.55,
+      }}
+    >
       {seqs.map(({ scene, from, durationInFrames }) => (
         <Sequence key={scene.id} from={from} durationInFrames={durationInFrames}>
           <CinematicDispatch scene={scene} brand={brand} assetUrls={assetUrls} />
         </Sequence>
       ))}
-    </AbsoluteFill>
+      <CinematicBars heightPct={11} startFrame={0} duration={18} />
+    </TemplateRoot>
   );
 };
 
