@@ -24,7 +24,7 @@ const S3_BUCKET = process.env.S3_BUCKET || "flash-motion";
 const S3_REGION = process.env.S3_REGION || "us-east-1";
 const TEMP_DIR = process.env.TEMP_DIR || "/tmp/flash-motion";
 const S3_PUBLIC_ENDPOINT = process.env.S3_PUBLIC_ENDPOINT || S3_ENDPOINT;
-const TTS_ENABLED = process.env.TTS_ENABLED === "true"; // disabled by default (msedge-tts unreliable)
+const TTS_ENABLED = process.env.TTS_ENABLED !== "false"; // activé par défaut (Edge TTS gratuit et léger)
 const TTS_LANG = process.env.TTS_LANG || "fr";
 const MAX_CONCURRENT = parseInt(process.env.MAX_CONCURRENT_RENDERS || "1", 10);
 const RENDER_TIMEOUT_MS = parseInt(process.env.RENDER_TIMEOUT_MS || "300000", 10);
@@ -102,7 +102,13 @@ async function resolveAssetUrls(assets: RenderJobData["assets"]): Promise<Record
 // ── Determine composition based on aspect ratio and scene type ──
 function getCompositionId(template: string, aspectRatio: string): string {
   const aspectSuffix = aspectRatio === "16:9" ? "-16x9" : aspectRatio === "1:1" ? "-1x1" : "";
-  const validTemplates = ["HeroPromo", "Carousel", "FeatureList", "Demo", "Outro", "EcommerceShowcase", "Testimonial", "Educational", "SaasLaunch", "CinematicPromo"];
+  const validTemplates = [
+    // Templates existants
+    "HeroPromo", "Carousel", "FeatureList", "Demo", "Outro",
+    "EcommerceShowcase", "Testimonial", "Educational", "SaasLaunch", "CinematicPromo",
+    // Nouveaux templates professionnels
+    "LuxuryAd", "DynamicProduct", "SocialMediaBurst", "CinematicBrand",
+  ];
   const base = validTemplates.includes(template) ? template : "HeroPromo";
   return base + aspectSuffix;
 }
@@ -168,7 +174,7 @@ async function processRender(job: Job<RenderJobData>) {
       (sum: number, s: any) => sum + (s.duration_s || 3),
       0,
     );
-    const fps = 24; // 24fps is sufficient and 20% faster than 30fps
+    const fps = 30; // 30fps pour une fluidité professionnelle (aligné avec les compositions)
     const compositionId = getCompositionId(template || "HeroPromo", storyboard.aspect_ratio);
 
     // 4. Select composition

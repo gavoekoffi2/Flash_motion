@@ -31,10 +31,11 @@ export const env = {
   openrouterApiKey: process.env.OPENROUTER_API_KEY || "",
   openrouterModel: process.env.OPENROUTER_MODEL || "mistralai/mistral-7b-instruct",
   ollamaUrl: process.env.OLLAMA_URL || "http://localhost:11434",
-  ollamaModel: process.env.OLLAMA_MODEL || "mistral",
+  ollamaModel: process.env.OLLAMA_MODEL || "gemma4",
 
-  ttsEngine: (process.env.TTS_ENGINE || "none") as "none" | "elevenlabs" | "piper",
+  ttsEngine: (process.env.TTS_ENGINE || "edge") as "none" | "elevenlabs" | "piper" | "edge",
   elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || "",
+  ttsLang: process.env.TTS_LANG || "fr",
 
   maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || "8", 10),
   maxAssetsPerProject: parseInt(process.env.MAX_ASSETS_PER_PROJECT || "20", 10),

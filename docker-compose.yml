@@ -68,12 +68,11 @@ services:
       JWT_EXPIRES_IN: 7d
       FRONTEND_URL: https://flash-motion.vercel.app,https://flashmotion.netlify.app,https://flash-motion-projobcopilotes-projects.vercel.app,https://flash-motion-git-main-projobcopilotes-projects.vercel.app,http://localhost:3000
       APP_URL: https://flash-motion-projobcopilotes-projects.vercel.app
-      LLM_MODE: none
-      OPENROUTER_API_KEY: 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
-      OPENROUTER_MODEL: openai/gpt-4o-mini
+      LLM_MODE: ollama
       OLLAMA_URL: http://host.docker.internal:11434
-      OLLAMA_MODEL: mistral
-      TTS_ENGINE: none
+      OLLAMA_MODEL: gemma4
+      TTS_ENGINE: edge
+      TTS_LANG: fr
       MAX_CONCURRENT_RENDERS: "1"
       RENDER_TIMEOUT_MS: "300000"
       TEMP_DIR: /tmp/flash-motion
@@ -116,8 +115,11 @@ services:
       S3_SECRET_KEY: minioadmin123
       S3_BUCKET: flash-motion
       S3_REGION: us-east-1
+      S3_PUBLIC_ENDPOINT: http://76.13.129.252:9000
+      TTS_ENABLED: "true"
+      TTS_LANG: fr
       MAX_CONCURRENT_RENDERS: "1"
-      RENDER_TIMEOUT_MS: "300000"
+      RENDER_TIMEOUT_MS: "360000"
       TEMP_DIR: /tmp/flash-motion
     volumes:
       - /opt/flash-motion/workers/remotion-worker:/app
