@@ -106,11 +106,15 @@ const TEMPLATES = [
 ];
 
 interface TemplateSelectorProps {
-  value: string;
-  onChange: (id: string) => void;
+  value?: string;
+  onChange?: (id: string) => void;
+  selected?: string;
+  onSelect?: (id: string) => void;
 }
 
-export default function TemplateSelector({ value, onChange }: TemplateSelectorProps) {
+export default function TemplateSelector({ value, onChange, selected, onSelect }: TemplateSelectorProps) {
+  const activeValue = value ?? selected ?? "";
+  const handleChange = onChange ?? onSelect ?? (() => {});
   const [hovered, setHovered] = useState<string | null>(null);
   const [filterTag, setFilterTag] = useState<string>("Tous");
 
@@ -139,13 +143,14 @@ export default function TemplateSelector({ value, onChange }: TemplateSelectorPr
       {/* Grille templates */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {filtered.map(t => {
-          const isSelected = value === t.id;
+          const isSelected = activeValue === t.id;
           const isHovered = hovered === t.id;
           return (
-            <button key={t.id} onClick={() => onChange(t.id)}
+            <button key={t.id}
               onMouseEnter={() => setHovered(t.id)}
               onMouseLeave={() => setHovered(null)}
               className="relative text-left rounded-2xl overflow-hidden transition-all duration-300 group"
+              onClick={() => handleChange(t.id)}
               style={{
                 border: isSelected
                   ? "2px solid rgba(139,92,246,0.8)"
@@ -203,12 +208,12 @@ export default function TemplateSelector({ value, onChange }: TemplateSelectorPr
       </div>
 
       {/* Template sélectionné */}
-      {value && (
+      {activeValue && (
         <div className="flex items-center gap-3 p-3 rounded-xl"
           style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>
           <span className="text-brand-400 text-sm">✓</span>
           <span className="text-sm text-dark-200">
-            Template sélectionné : <strong className="text-white">{TEMPLATES.find(t => t.id === value)?.name}</strong>
+            Template sélectionné : <strong className="text-white">{TEMPLATES.find(t => t.id === activeValue)?.name}</strong>
           </span>
         </div>
       )}
